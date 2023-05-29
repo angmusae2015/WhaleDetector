@@ -47,16 +47,16 @@ async def send_whale_alarm(cur, conn):
 @bot.message_handler(commands=['start'])
 async def start(message):
     chat_id = message.chat.id
-
-    if not check_user(chat_id): # 등록이 안된 채팅이라면 데이터베이스에 채팅 ID 추가
-        await bot.send_message(chat_id, "반갑습니다! 알림 설정을 받고 싶으시다면 '/startalarm'을 입력해주세요.")
-        add_user(chat_id)
+    await bot.send_message(chat_id, "반갑습니다! 알림 설정을 받고 싶으시다면 '/startalarm'을 입력해주세요.")
 
 
 # '/startalarm' 입력 시 해당 채팅에 대해서 알림 수신 희망으로 설정
 @bot.message_handler(commands=['startalarm'])
 async def start_alarm(message):
     chat_id = message.chat.id
+
+    if not check_user(chat_id):
+        add_user(chat_id)
 
     if not get_alarm_state(chat_id):
         await bot.send_message(chat_id, "지금부터 설정하신 거래소와 종목에 대해서 고래 알림을 시작할게요! '/stopalarm'으로 알림을 끌 수 있어요.")
