@@ -59,18 +59,18 @@ async def start_alarm(message):
     chat_id = message.chat.id
 
     if not get_alarm_state(chat_id):
-        await bot.send_message(chat_id, "지금부터 설정하신 거래소와 종목에 대해서 고래 알림을 시작할게요!")
+        await bot.send_message(chat_id, "지금부터 설정하신 거래소와 종목에 대해서 고래 알림을 시작할게요! '/stopalarm'으로 알림을 끌 수 있어요.")
         change_alarm_state(chat_id)
 
         # 테스트를 위한 임의의 채팅 알림 규칙
-        add_rule(chat_id, "upbit", "KRW-BTC", 70000000)
+        add_rule(chat_id, "upbit", "KRW-BTC", 2000000000)
 
     else:
-        await bot.send_message(chat_id, "이미 고래 알림이 켜져 있어요. 고래 알림을 받을 거래소와 종목을 알려주시면 알림을 보내드려요!")
+        await bot.send_message(chat_id, "이미 고래 알림이 켜져 있어요. 고래 알림을 받을 거래소와 종목을 알려주시면 알림을 보내드려요! '/stopalarm'으로 알림을 끌 수 있어요.")
 
 
 # '/endalarm' 입력 시 해당 채팅에 대해서 알림 수신 거부로 설정
-@bot.message_handler(commands=['endalarm'])
+@bot.message_handler(commands=['stopalarm'])
 async def end_alarm(message):
     chat_id = message.chat.id
 
@@ -82,7 +82,7 @@ async def end_alarm(message):
         await bot.send_message(chat_id, "이미 고래 알림이 꺼져 있어요. '/startalarm' 명령어를 입력해 알림을 킬 수 있어요.")
 
 
-aioschedule.every(3).seconds.do(send_whale_alarm)
+aioschedule.every(30).seconds.do(send_whale_alarm)
 
 
 async def scheduler():
