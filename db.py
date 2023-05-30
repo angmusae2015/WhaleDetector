@@ -6,14 +6,17 @@ def db_handler(func):
         conn = sqlite3.connect("database.db")
         cur = conn.cursor()
 
-        return func(cur, conn, *args, **kwargs)
+        f = func(cur, *args, **kwargs)
+        conn.commit()
+
+        return f
 
     return wrapper
 
 
 # 데이터베이스 초기화
 @db_handler
-def init_db(cur, conn):
+def init_db(cur):
     # 거래소 정보 테이블
     cur.execute("""CREATE TABLE Exchange (exchange_code TEXT PRIMARY KEY, excange_name TEXT NOT NULL)""")
     cur.execute("""INSERT INTO Exchange VALUES ("upbit", "업비트");""")
@@ -68,13 +71,11 @@ def init_db(cur, conn):
         FOREIGN KEY (user_id) REFERENCES User(chat_id) ON DELETE CASCADE
     )
     """)
-    
-    conn.commit()
 
 
 # 데이터베이스에서 등록된 채팅 ID인지 확인
 @db_handler
-def check_user(cur, conn, chat_id):
+def check_user(cur, chat_id):
     cur.execute("""SELECT * FROM User WHERE chat_id={0};""".format(chat_id))
 
     return (len(cur.fetchall()) > 0)
@@ -82,14 +83,13 @@ def check_user(cur, conn, chat_id):
 
 # 데이터베이스에 채팅 ID 추가
 @db_handler
-def add_user(cur, conn, chat_id):
+def add_user(cur, chat_id):
     cur.execute("""INSERT INTO User VALUES ({0}, {1}, {1});""".format(chat_id, 0))
-    conn.commit()
 
 
 # 유저 상태 불러오기
 @db_handler
-def get_user_status(cur, conn, chat_id):
+def get_user_status(cur, chat_id):
     cur.execute("""SELECT status_id FROM User WHERE chat_id={0}""".format(chat_id))
     
     return cur.fetchall()[0][0]
@@ -97,31 +97,29 @@ def get_user_status(cur, conn, chat_id):
 
 # 유저 상태 변경
 @db_handler
-def set_user_status(cur, conn, chat_id, status_id):
+def set_user_status(cur, chat_id, status_id):
     cur.execute("""UPDATE User SET status_id={0} WHERE chat_id={1}""".format(status_id, chat_id))
-    conn.commit()
 
 
 # 채팅 고래 알림 설정 확인
 @db_handler
-def get_alarm_state(cur, conn, chat_id):
+def get_alarm_state(cur, chat_id):
     cur.execute("""SELECT option FROM User WHERE chat_id={0};""".format(chat_id))
     return cur.fetchall()[0][0]
 
 
 # 채팅 고래 알림 설정 변경
 @db_handler
-def change_alarm_state(cur, conn, chat_id):
+def change_alarm_state(cur, chat_id):
     cur.execute("""SELECT option FROM User WHERE chat_id={0};""".format(chat_id))
     state = cur.fetchall()[0][0]
 
     cur.execute("""UPDATE User SET option={0} WHERE chat_id={1};""".format(not state, chat_id))
-    conn.commit()
 
 
 # 종목 ID 불러오기
 @db_handler
-def get_market_id(cur, conn, exchange_code, market_code):
+def get_market_id(cur, exchange_code, market_code):
     cur.execute("""SELECT market_id FROM Market WHERE exchange_code='{0}' and market_code='{1}';""".format(exchange_code, market_code))
     
     try:
@@ -132,7 +130,7 @@ def get_market_id(cur, conn, exchange_code, market_code):
 
 # 채팅 알림 규칙 ID 불러오기
 @db_handler
-def get_rule_id(cur, conn, chat_id, exchange_code, market_code, threshold):
+def get_rule_id(cur, chat_id, exchange_code, market_code, threshold):
     market_id = get_market_id(exchange_code, market_code)
     cur.execute("""SELECT rule_id FROM Rules WHERE chat_id={0} and market_id={1} and threshold={2};""".format(chat_id, market_id, threshold))
     
@@ -144,16 +142,15 @@ def get_rule_id(cur, conn, chat_id, exchange_code, market_code, threshold):
 
 # 채팅 알림 규칙 등록
 @db_handler
-def add_rule(cur, conn, chat_id, exchange_code, market_code, threshold):
+def add_rule(cur, chat_id, exchange_code, market_code, threshold):
     if get_rule_id(chat_id, exchange_code, market_code, threshold) is None:
         market_id = get_market_id(exchange_code, market_code)
         cur.execute("""INSERT INTO Rules (chat_id, market_id, threshold) VALUES ({0}, {1}, {2});""".format(chat_id, market_id, threshold))
-        conn.commit()
 
 
 # 거래소 이름 불러오기
 @db_handler
-def get_exchange_name(cur, conn, exchange_code=None):
+def get_exchange_name(cur, exchange_code=None):
     if exchange_code is None:
         cur.execute("""SELECT exchange_name FROM Exchange""")   # 매개변수 exchange_code가 None일 경우 모든 거래소 이름 반환
 
