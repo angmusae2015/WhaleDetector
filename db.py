@@ -162,3 +162,17 @@ def get_exchange_name(cur, exchange_code=None):
             return cur.fetchall()[0][0]
         except IndexError:
             return None
+
+
+# 채널 추가
+@db_handler
+def add_channel(cur, channel_id: int, channel_name: str, chat_id: int):
+    cur.execute("""INSERT INTO channel VALUES ({0}, '{1}', {2})""".format(channel_id, channel_name, chat_id))
+
+
+# 유저의 채널 불러오기
+@db_handler
+def get_channels_by_user(cur, chat_id: int):
+    cur.execute("""SELECT channel_id, channel_name FROM channel WHERE user_id={0}""".format(chat_id))
+
+    return cur.fetchall()
