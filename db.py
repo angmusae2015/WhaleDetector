@@ -65,7 +65,7 @@ def init_db(cur):
     # 채널 정보 테이블
     cur.execute("""CREATE TABLE Channel (
         channel_id INTEGER PRIMARY KEY,
-        channel_name TEXT NOT NULL,
+        channel_name TEXT,
         user_id INTEGER NOT NULL,
 
         FOREIGN KEY (user_id) REFERENCES User(chat_id) ON DELETE CASCADE
@@ -166,8 +166,13 @@ def get_exchange_name(cur, exchange_code=None):
 
 # 채널 추가
 @db_handler
-def add_channel(cur, channel_id: int, channel_name: str, chat_id: int):
-    cur.execute("""INSERT INTO channel VALUES ({0}, '{1}', {2})""".format(channel_id, channel_name, chat_id))
+def add_channel(cur, channel_id, chat_id):
+    cur.execute("""INSERT INTO channel (channel_id, user_id) VALUES ({0}, {2})""".format(channel_id, chat_id))
+
+
+@db_handler
+def set_channel_name(cur, channel_id, channel_name):
+    cur.execute("""UPDATE channel SET channel_name='{0}' WHERE channel_id={1}""".format(channel_name, channel_id))
 
 
 # 유저의 채널 불러오기
