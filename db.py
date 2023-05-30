@@ -17,6 +17,8 @@ def db_handler(func):
 # 데이터베이스 초기화
 @db_handler
 def init_db(cur):
+    status_code = ["none", "waiting_for_channel_id", "waiting_for_channel_name"]    # 채팅 상태 코드 리스트
+
     # 거래소 정보 테이블
     cur.execute("""CREATE TABLE Exchange (exchange_code TEXT PRIMARY KEY, excange_name TEXT NOT NULL)""")
     cur.execute("""INSERT INTO Exchange VALUES ("upbit", "업비트");""")
@@ -38,9 +40,10 @@ def init_db(cur):
         status_id INTEGER PRIMARY KEY AUTOINCREMENT,
         status_code TEXT
         );""")
-    
-    cur.execute("""INSERT INTO Status VALUES (0, "none");""")   # 0: 아무것도 없는 상태
-    cur.execute("""INSERT INTO Status VALUES (1, "waiting_for_channel_id");""") # 1: 채널 ID 입력 대기 상태
+
+    # 채팅 상태 코드 입력
+    for code in status_code:
+        cur.execute("""INSERT INTO Status VALUES ({0}, "{1}");""".format(status_code.index(code), code))
 
     # 유저(채팅) 설정 테이블
     cur.execute("""CREATE TABLE User (
