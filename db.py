@@ -170,6 +170,7 @@ def add_channel(cur, channel_id, chat_id):
     cur.execute("""INSERT INTO channel (channel_id, user_id) VALUES ({0}, {2})""".format(channel_id, chat_id))
 
 
+# 채널 이름 설정
 @db_handler
 def set_channel_name(cur, channel_id, channel_name):
     cur.execute("""UPDATE channel SET channel_name='{0}' WHERE channel_id={1}""".format(channel_name, channel_id))
