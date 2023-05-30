@@ -17,7 +17,7 @@ bot = AsyncTeleBot(token)
 
 
 # 고래를 감시하고 알림 메시지 전송
-@db.db_reader
+@db.db_handler
 async def send_whale_alarm(cur):
     # 알림 규칙으로 등록된 종목만 호가 데이터를 조회
     cur.execute("""SELECT DISTINCT market_id FROM Rules;""")
