@@ -170,7 +170,7 @@ def get_exchange_name(cur, exchange_code=None):
 # 채널 추가
 @db_handler
 def add_channel(cur, channel_id, chat_id):
-    cur.execute("""INSERT INTO channel (channel_id, user_id) VALUES ({0}, {2})""".format(channel_id, chat_id))
+    cur.execute("""INSERT INTO channel (channel_id, user_id) VALUES ({0}, {1})""".format(channel_id, chat_id))
 
 
 # 채널 이름 설정
