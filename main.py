@@ -122,11 +122,13 @@ async def get_channel_id(message):
 
 
 
-"""
 # 채널 이름 입력 시
 @bot.message_handler(func=lambda message: db.get_user_status(message.chat.id) == 2)
 async def set_channel_name(message):
-"""
+    db.set_channel_name(message.text, message.chat.id)
+
+    await bot.send_message(message.chat.id, "이 채널의 이름을 '{0}'으로 설정했어요!".format(message.text))
+    db.set_user_status(message.chat.id, 0)  # 유저의 상태를 일반 상태로 변경
 
 
 aioschedule.every(30).seconds.do(send_whale_alarm)
