@@ -170,13 +170,13 @@ def get_exchange_name(cur, exchange_code=None):
 # 채널 추가
 @db_handler
 def add_channel(cur, channel_id, chat_id):
-    cur.execute("""INSERT INTO channel (channel_id, user_id) VALUES ({0}, {1})""".format(channel_id, chat_id))
+    cur.execute("""INSERT INTO channel VALUES ({0}, '{1}' {1})""".format(channel_id, chat_id))  # channel_name은 임시로 유저의 chat_id로 설정
 
 
 # 채널 이름 설정
 @db_handler
-def set_channel_name(cur, channel_id, channel_name):
-    cur.execute("""UPDATE channel SET channel_name='{0}' WHERE channel_id={1}""".format(channel_name, channel_id))
+def set_channel_name(cur, channel_name, chat_id):
+    cur.execute("""UPDATE channel SET channel_name='{0}' WHERE channel_name='{1}'""".format(channel_name, chat_id))
 
 
 # 유저의 채널 불러오기
