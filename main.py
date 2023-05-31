@@ -90,32 +90,44 @@ async def add_rule(message):
     markup = quick_markup(markup_dic, row_width=3)  # InlineKeyboard 마크업
 
     await bot.send_message(message.chat.id, "어떤 거래소에서 볼까요?", reply_markup=markup)
+"""
 
 
 # 알림을 보낼 채널 등록
 @bot.message_handler(commands=['addtochannel'])
 async def add_to_channel(message):
-    guide_msg = 제가 알림을 보내드릴 채널을 등록하시려면 채널의 아이디가 필요해요!
+    guide_msg = """제가 알림을 보내드릴 채널을 등록하시려면 채널의 아이디가 필요해요!
     1. 채널에 저를 초대해주세요.
     채널 우상단의 프로필 선택 > 편집 > 관리자 > 관리자 추가 > '고래잡이배' 검색 후 완료
     2. 채널 유형 '공개'로 설정
     채널 우상단의 프로필 선택 > 편집 > 채널 유형 > '공개' 선택
     3. 원하는 공개 링크로 설정해주세요.
-    4. 공개 링크를 저에게 보내주세요.
+    4. 공개 링크를 저에게 보내주세요."""
     
     await bot.send_message(message.chat.id, guide_msg)
 
     db.set_user_status(message.chat.id, 1)  # 유저의 상태를 채널 ID 입력 대기 상태로 변경
 
 
-# 채널 ID 입력 시
-@bot.message_handler(regexp='^https:\/\/t.me\/')
+# 유저의 상태가 채널 ID 입력 대기 상태일 때 채널 ID 입력 시
+@bot.message_handler(regexp='^https:\/\/t.me\/', func=lambda message: db.get_user_status(message.chat.id) == 1)
 async def get_channel_id(message):
-    if db.get_user_status(message.chat.id) == 1:
-        await bot.send_message(message.chat.id, "채널 ID!") # 테스트 코드
-        
-        db.set_user_status(message.chat.id, 0)
+    channel_id = "@" + message.text.replace('https://t.me/', '')
+    res = await bot.send_message(channel_id, "이 채널로 알림을 보내드릴게요! 채널은 다시 비공개로 변경하셔도 좋아요.")
+
+    db.add_channel(res.chat.id, message.chat.id)   # 채널 등록
+
+    await bot.send_message(message.chat.id, "이 채널의 이름을 알려주세요!")        
+    db.set_user_status(message.chat.id, 2)  # 유저의 상태를 채널 이름 입력 대기 상태로 변경
+
+
+
 """
+# 채널 이름 입력 시
+@bot.message_handler(func=lambda message: db.get_user_status(message.chat.id) == 2)
+async def set_channel_name(message):
+"""
+
 
 aioschedule.every(30).seconds.do(send_whale_alarm)
 
