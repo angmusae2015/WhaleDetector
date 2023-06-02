@@ -2,6 +2,7 @@ import sqlite3
 import asyncio
 import aioschedule
 from telebot.async_telebot import AsyncTeleBot
+from telebot.types import InlineKeyboardButton, InlineKeyboardMarkup
 from orderbook import Orderbook
 import db
 
@@ -77,19 +78,21 @@ async def end_alarm(message):
         await bot.send_message(message.chat.id, "이미 고래 알림이 꺼져 있어요. '/startalarm' 명령어를 입력해 알림을 킬 수 있어요.")
 
 
-"""
-# '/addalarm' 입력 시 규칙 등록
+
+# '/addalarm' 입력 시 알림 등록
 @bot.message_handler(commands=['addalarm'])
 async def add_alarm(message):
     exchange_name_list = db.get_exchange_name() # 저장된 전체 거래소 목록
 
-    markup_dic = {}
+    markup = InlineKeyboardMarkup() # 거래소 선택 인라인 키보드
     for exchange_name in exchange_name_list:
-        markup_dic[exchange_name] = {'callback_data': exchange_name}
-
-    markup = quick_markup(markup_dic, row_width=3)  # InlineKeyboard 마크업
-
+        markup.add(InlineKeyboardButton(text=exchange_name, callback_data="exchange_name=" + exchange_name))    # 버튼 선택 시 콜백 데이터 전송
+    
     await bot.send_message(message.chat.id, "어떤 거래소에서 볼까요?", reply_markup=markup)
+
+
+"""
+@bot.callback_query_handler(func=lambda call: call.data.startswith("exchange_name"))
 """
 
 
