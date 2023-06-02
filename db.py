@@ -25,15 +25,15 @@ def init_db(cur):
     cur.execute("""INSERT INTO Exchange VALUES ("binance", "바이낸스");""")
 
     # 종목 정보 테이블
-    cur.execute("""CREATE TABLE Market (
-        market_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cur.execute("""CREATE TABLE Item (
+        item_id INTEGER PRIMARY KEY AUTOINCREMENT,
         exchange_code TEXT NOT NULL,
-        market_code TEXT NOT NULL,
-        market_name TEXT NOT NULL,
+        item_code TEXT NOT NULL,
+        item_name TEXT NOT NULL,
 
         FOREIGN KEY (exchange_code) REFERENCES Exchange(exchange_code) ON DELETE CASCADE
         );""")
-    cur.execute("""INSERT INTO Market (exchange_code, market_code, market_name) VALUES ("upbit", "KRW-BTC", "비트코인");""")
+    cur.execute("""INSERT INTO Item (exchange_code, item_code, item_name) VALUES ("upbit", "KRW-BTC", "비트코인");""")
 
     # 채팅 상태 테이블
     cur.execute("""CREATE TABLE Status (
@@ -58,11 +58,11 @@ def init_db(cur):
     cur.execute("""CREATE TABLE Rules (
         rule_id INTEGER PRIMARY KEY AUTOINCREMENT,
         chat_id INTEGER NOT NULL,
-        market_id INTEGER NOT NULL,
+        item_id INTEGER NOT NULL,
         threshold INTEGER NOT NULL,
 
         FOREIGN KEY (chat_id) REFERENCES User(chat_id) ON DELETE CASCADE,
-        FOREIGN KEY (market_id) REFERENCES Market(market_id) ON DELETE CASCADE
+        FOREIGN KEY (item_id) REFERENCES Item(item_id) ON DELETE CASCADE
         );""")
 
     # 채널 정보 테이블
@@ -122,8 +122,8 @@ def change_alarm_state(cur, chat_id):
 
 # 종목 ID 불러오기
 @db_handler
-def get_market_id(cur, exchange_code, market_code):
-    cur.execute("""SELECT market_id FROM Market WHERE exchange_code='{0}' and market_code='{1}';""".format(exchange_code, market_code))
+def get_item_id(cur, exchange_code, item_code):
+    cur.execute("""SELECT item_id FROM Item WHERE exchange_code='{0}' and item_code='{1}';""".format(exchange_code, item_code))
     
     try:
         return cur.fetchall()[0][0]
@@ -133,9 +133,9 @@ def get_market_id(cur, exchange_code, market_code):
 
 # 채팅 알림 규칙 ID 불러오기
 @db_handler
-def get_rule_id(cur, chat_id, exchange_code, market_code, threshold):
-    market_id = get_market_id(exchange_code, market_code)
-    cur.execute("""SELECT rule_id FROM Rules WHERE chat_id={0} and market_id={1} and threshold={2};""".format(chat_id, market_id, threshold))
+def get_rule_id(cur, chat_id, exchange_code, item_code, threshold):
+    item_id = get_item_id(exchange_code, item_code)
+    cur.execute("""SELECT rule_id FROM Rules WHERE chat_id={0} and item_id={1} and threshold={2};""".format(chat_id, item_id, threshold))
     
     try:
         return cur.fetchall()[0][0]
@@ -145,10 +145,10 @@ def get_rule_id(cur, chat_id, exchange_code, market_code, threshold):
 
 # 채팅 알림 규칙 등록
 @db_handler
-def add_rule(cur, chat_id, exchange_code, market_code, threshold):
-    if get_rule_id(chat_id, exchange_code, market_code, threshold) is None:
-        market_id = get_market_id(exchange_code, market_code)
-        cur.execute("""INSERT INTO Rules (chat_id, market_id, threshold) VALUES ({0}, {1}, {2});""".format(chat_id, market_id, threshold))
+def add_rule(cur, chat_id, exchange_code, item_code, threshold):
+    if get_rule_id(chat_id, exchange_code, item_code, threshold) is None:
+        item_id = get_item_id(exchange_code, item_code)
+        cur.execute("""INSERT INTO Rules (chat_id, item_id, threshold) VALUES ({0}, {1}, {2});""".format(chat_id, item_id, threshold))
 
 
 # 거래소 이름 불러오기

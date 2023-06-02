@@ -20,21 +20,21 @@ bot = AsyncTeleBot(token)
 @db.db_handler
 async def send_whale_alarm(cur):
     # 알림 규칙으로 등록된 종목만 호가 데이터를 조회
-    cur.execute("""SELECT DISTINCT market_id FROM Rules;""")
-    market_id_list = [id[0] for id in cur.fetchall()]
+    cur.execute("""SELECT DISTINCT item_id FROM Rules;""")
+    item_id_list = [id[0] for id in cur.fetchall()]
     
-    for market_id in market_id_list:
+    for item_id in item_id_list:
         # 해당 종목 호가 불러오기
-        cur.execute("""SELECT * FROM Market WHERE market_id={0};""".format(market_id))
-        id, exchange_code, market_code, market_name = cur.fetchall()[0]
+        cur.execute("""SELECT * FROM Item WHERE item_id={0};""".format(item_id))
+        id, exchange_code, item_code, item_name = cur.fetchall()[0]
 
-        orderbook = Orderbook(exchange_code, market_code)   # 종목 호가 데이터
+        orderbook = Orderbook(exchange_code, item_code)   # 종목 호가 데이터
 
         # 해당 종목을 알림 설정한 규칙 불러오기
-        cur.execute("""SELECT * FROM Rules WHERE market_id={0};""".format(market_id))
+        cur.execute("""SELECT * FROM Rules WHERE item_id={0};""".format(item_id))
         rule_list = cur.fetchall()
         for rule in rule_list:
-            rule_id, chat_id, market_id, threshold = rule
+            rule_id, chat_id, item_id, threshold = rule
             msg_list = orderbook.whale_alarm(threshold)  # 고래 알림 메시지 리스트
 
             # 알림 설정이 켜진 채팅에 알림 메시지 전송

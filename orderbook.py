@@ -3,11 +3,11 @@ from db import db_handler
 import requests
 
 class Orderbook:
-    def __init__(self, exchange_code, market_code):  # 거래소 이름, 종목 이름, 호가 데이터
+    def __init__(self, exchange_code, item_code):  # 거래소 이름, 종목 이름, 호가 데이터
         self.exchange_code = exchange_code  # 거래소 이름
-        self.market_code = market_code  # 종목 이름
+        self.item_code = item_code  # 종목 이름
         self.request_time = datetime.today()    # 요청 일시
-        self.orderbook_data = self.get_orderbook_data(exchange_code, market_code)   # 호가 데이터
+        self.orderbook_data = self.get_orderbook_data(exchange_code, item_code)   # 호가 데이터
         self.ask, self.bid = self.parse_orderbook_data(exchange_code, self.orderbook_data)   # 매도/매수 호가
         
 
@@ -18,9 +18,9 @@ class Orderbook:
 
     # 호가 데이터 불러오기
     @staticmethod
-    def get_orderbook_data(exchange_code, market_code):
+    def get_orderbook_data(exchange_code, item_code):
         if exchange_code == "upbit":
-            url = "https://api.upbit.com/v1/orderbook?markets=" + market_code
+            url = "https://api.upbit.com/v1/orderbook?markets=" + item_code
             headers = {"accept": "application/json"}
 
             orderbook_data = requests.get(url, headers=headers).json()[0]["orderbook_units"]
@@ -52,9 +52,9 @@ class Orderbook:
 
         msg = []    # 메시지 목록
         for whale in whales_in_ask:
-            msg.append("업비트 {0} 고래 발견!\n\n일시: {1}\n매도벽 {2[1]:.2f}@{2[0]:,}\nKRW {3:,.2f}".format(self.market_code, self.strftime(), whale, whale[0] * whale[1]))
+            msg.append("업비트 {0} 고래 발견!\n\n일시: {1}\n매도벽 {2[1]:.2f}@{2[0]:,}\nKRW {3:,.2f}".format(self.item_code, self.strftime(), whale, whale[0] * whale[1]))
 
         for whale in whales_in_bid:
-            msg.append("업비트 {0} 고래 발견!\n\n일시: {1}\n매수벽 {2[1]:.2f}@{2[0]:,}\nKRW {3:,.2f}".format(self.market_code, self.strftime(), whale, whale[0] * whale[1]))
+            msg.append("업비트 {0} 고래 발견!\n\n일시: {1}\n매수벽 {2[1]:.2f}@{2[0]:,}\nKRW {3:,.2f}".format(self.item_code, self.strftime(), whale, whale[0] * whale[1]))
         
         return msg
