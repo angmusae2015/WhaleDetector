@@ -20,7 +20,7 @@ bot = AsyncTeleBot(token)
 @db.db_handler
 async def send_whale_alarm(cur):
     # 알림 규칙으로 등록된 종목만 호가 데이터를 조회
-    cur.execute("""SELECT DISTINCT item_id FROM Rules;""")
+    cur.execute("""SELECT DISTINCT item_id FROM Alarm;""")
     item_id_list = [id[0] for id in cur.fetchall()]
     
     for item_id in item_id_list:
@@ -31,10 +31,10 @@ async def send_whale_alarm(cur):
         orderbook = Orderbook(exchange_code, item_code)   # 종목 호가 데이터
 
         # 해당 종목을 알림 설정한 규칙 불러오기
-        cur.execute("""SELECT * FROM Rules WHERE item_id={0};""".format(item_id))
-        rule_list = cur.fetchall()
-        for rule in rule_list:
-            rule_id, chat_id, item_id, threshold = rule
+        cur.execute("""SELECT * FROM Alarm WHERE item_id={0};""".format(item_id))
+        alarm_list = cur.fetchall()
+        for alarm in alarm_list:
+            alarm_id, chat_id, item_id, threshold = alarm
             msg_list = orderbook.whale_alarm(threshold)  # 고래 알림 메시지 리스트
 
             # 알림 설정이 켜진 채팅에 알림 메시지 전송
@@ -60,7 +60,7 @@ async def start_alarm(message):
         db.change_alarm_state(message.chat.id)
 
         # 테스트를 위한 임의의 채팅 알림 규칙
-        db.add_rule(message.chat.id, "upbit", "KRW-BTC", 2000000000)
+        db.add_alarm(message.chat.id, "upbit", "KRW-BTC", 2000000000)
 
     else:
         await bot.send_message(message.chat.id, "이미 고래 알림이 켜져 있어요. 고래 알림을 받을 거래소와 종목을 알려주시면 알림을 보내드려요! '/stopalarm'으로 알림을 끌 수 있어요.")
@@ -78,9 +78,9 @@ async def end_alarm(message):
 
 
 """
-# '/addrule' 입력 시 규칙 등록
-@bot.message_handler(commands=['addrule'])
-async def add_rule(message):
+# '/addalarm' 입력 시 규칙 등록
+@bot.message_handler(commands=['addalarm'])
+async def add_alarm(message):
     exchange_name_list = db.get_exchange_name() # 저장된 전체 거래소 목록
 
     markup_dic = {}

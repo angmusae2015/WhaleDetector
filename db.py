@@ -55,8 +55,8 @@ def init_db(cur):
         );""")
     
     # 알림 설정 규칙 테이블
-    cur.execute("""CREATE TABLE Rules (
-        rule_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cur.execute("""CREATE TABLE Alarm (
+        alarm_id INTEGER PRIMARY KEY AUTOINCREMENT,
         chat_id INTEGER NOT NULL,
         item_id INTEGER NOT NULL,
         threshold INTEGER NOT NULL,
@@ -133,9 +133,9 @@ def get_item_id(cur, exchange_code, item_code):
 
 # 채팅 알림 규칙 ID 불러오기
 @db_handler
-def get_rule_id(cur, chat_id, exchange_code, item_code, threshold):
+def get_alarm_id(cur, chat_id, exchange_code, item_code, threshold):
     item_id = get_item_id(exchange_code, item_code)
-    cur.execute("""SELECT rule_id FROM Rules WHERE chat_id={0} and item_id={1} and threshold={2};""".format(chat_id, item_id, threshold))
+    cur.execute("""SELECT alarm_id FROM Alarm WHERE chat_id={0} and item_id={1} and threshold={2};""".format(chat_id, item_id, threshold))
     
     try:
         return cur.fetchall()[0][0]
@@ -145,10 +145,10 @@ def get_rule_id(cur, chat_id, exchange_code, item_code, threshold):
 
 # 채팅 알림 규칙 등록
 @db_handler
-def add_rule(cur, chat_id, exchange_code, item_code, threshold):
-    if get_rule_id(chat_id, exchange_code, item_code, threshold) is None:
+def add_alarm(cur, chat_id, exchange_code, item_code, threshold):
+    if get_alarm_id(chat_id, exchange_code, item_code, threshold) is None:
         item_id = get_item_id(exchange_code, item_code)
-        cur.execute("""INSERT INTO Rules (chat_id, item_id, threshold) VALUES ({0}, {1}, {2});""".format(chat_id, item_id, threshold))
+        cur.execute("""INSERT INTO Alarm (chat_id, item_id, threshold) VALUES ({0}, {1}, {2});""".format(chat_id, item_id, threshold))
 
 
 # 거래소 이름 불러오기
