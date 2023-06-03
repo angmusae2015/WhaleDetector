@@ -22,6 +22,11 @@ def parse_callback(callback_data):
     return parameter
 
 
+# '변수명': '값' 형식의 딕셔너리를 콜백 데이터로 전송할 문자열로 변환
+def write_callback(dic):
+    return "?".join(["{0}={1}".format(key, val) for key, val in dic.items()])
+
+
 token = get_token("token.txt")
 bot = AsyncTeleBot(token)
 
@@ -95,18 +100,27 @@ async def add_alarm(message):
 
     markup = InlineKeyboardMarkup() # 거래소 선택 인라인 키보드
     for exchange_code in exchange_dic.keys():
-        markup.add(InlineKeyboardButton(text=exchange_dic[exchange_code], callback_data="context=addalarm1:exchange=" + exchange_code))    # 버튼 선택 시 콜백 데이터로 거래소 코드 전송
+        callback_dic = {
+            'context': 'addalarm1',
+            'exchange': exchange_code
+        }
+        markup.add(InlineKeyboardButton(text=exchange_dic[exchange_code], callback_data=write_callback(callback_dic)))    # 버튼 선택 시 콜백 데이터로 거래소 코드 전송
     
-    await bot.send_message(message.chat.id, "어떤 거래소에서 볼까요?", reply_markup=markup)
+    await bot.send_message(message.chat.id, "거래소를 선택해주세요.", reply_markup=markup)
 
 
 """
-@bot.callback_query_handler(func=lambda call: call.data.startswith("addalarm1:"))
+@bot.callback_query_handler(func=lambda call: parse_callback(call.data)['context'] == 'addalarm1')
 async def ask_item(call):
-    exchange_code = call.data.
-    item_dic = db.get_item_dic()
-    markup = InlineKeyboardMarkup()
-    for item_name 
+    parameter = parse_callback(call.data)
+    exchange_code = parameter['exchange']
+    item_dic = db.get_item_dic(exchange_code=exchange_code) # 해당 거래소의 저장된 종목 목록
+
+    markup = InlineKeyboardMarkup() # 종목 선택 인라인 키보드
+    for item in item_dic.keys():
+        markup.add(InlineKeyboardButton(text="{0}({1})".format(item_dic[item]['item_code'], item_dic[item]['item_name']), callback_data=call.data + "item=" + item_dic[item]['item_code']))
+    
+    await bot.send_message(call.message.chat.id, "종목을 선택해주세요.", reply_markup=markup)
 """
 
 
