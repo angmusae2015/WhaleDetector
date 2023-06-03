@@ -130,6 +130,28 @@ def get_item_id(cur, exchange_code, item_code):
         return None
 
 
+@db_handler # 종목 목록 불러오기
+def get_item_dic(cur, exchange_code=None, item_code=None, item_name=None):  # 조건으로 거래소 코드, 종목 코드, 종목 이름 지정 가능
+    command = """SELECT * FROM Item"""  # sql 명령문
+    if exchange_code != None or item_code != None or item_name != None:
+        command += " WHERE"
+        condition = []
+        if exchange_code != None:
+            condition.append(""" exchange_code='{0}'""".format(exchange_code))
+        
+        if item_code != None:
+            condition.append(""" item_code='{0}'""".format(item_code))
+
+        if item_name != None:
+            condition.append(""" item_name='{0}'""".format(item_name))
+        
+        command += 'and'.join(condition)
+            
+    cur.execute(command)
+
+    return {item[0]:{'exchange_code': item[1], 'item_code': item[2], 'item_name': item[3]} for item in cur.fetchall()}
+
+
 # 채팅 알림 규칙 ID 불러오기
 @db_handler
 def get_alarm_id(cur, chat_id, exchange_code, item_code, threshold):
