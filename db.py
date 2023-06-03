@@ -17,7 +17,7 @@ def db_handler(func):
 # 데이터베이스 초기화
 @db_handler
 def init_db(cur):
-    status_code = ["none", "waiting_for_channel_id", "waiting_for_channel_name"]    # 채팅 상태 코드 리스트
+    status_code = ["none", "waiting_for_channel_id", "waiting_for_channel_name", "waiting_for_alarm_threshold"]    # 채팅 상태 코드 리스트
 
     # 거래소 정보 테이블
     cur.execute("""CREATE TABLE Exchange (exchange_code TEXT PRIMARY KEY, exchange_name TEXT NOT NULL)""")
