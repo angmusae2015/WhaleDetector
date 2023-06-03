@@ -13,6 +13,15 @@ def get_token(file_path):
     return token
 
 
+# 콜백 데이터로 전송된 문자열을 파싱하여 딕셔너리로 반환
+# 콜백 데이터는 '변수명1'='값'?'변수명2'='값'?... 형식으로 이루어짐
+def parse_callback(callback_data):
+    parameter = callback_data.split('?')
+    parameter = {p.split('=')[0]:p.split('=')[1] for p in parameter}
+
+    return parameter
+
+
 token = get_token("token.txt")
 bot = AsyncTeleBot(token)
 
@@ -78,15 +87,15 @@ async def end_alarm(message):
         await bot.send_message(message.chat.id, "이미 고래 알림이 꺼져 있어요. '/startalarm' 명령어를 입력해 알림을 킬 수 있어요.")
 
 
-
 # '/addalarm' 입력 시 알림 등록
+# 먼저 알림을 받을 거래소를 선택
 @bot.message_handler(commands=['addalarm'])
 async def add_alarm(message):
     exchange_dic = db.get_exchange_dic() # 저장된 전체 거래소 목록
 
     markup = InlineKeyboardMarkup() # 거래소 선택 인라인 키보드
     for exchange_code in exchange_dic.keys():
-        markup.add(InlineKeyboardButton(text=exchange_dic[exchange_code], callback_data="addalarm1:exchange=" + exchange_code))    # 버튼 선택 시 콜백 데이터로 거래소 코드 전송
+        markup.add(InlineKeyboardButton(text=exchange_dic[exchange_code], callback_data="context=addalarm1:exchange=" + exchange_code))    # 버튼 선택 시 콜백 데이터로 거래소 코드 전송
     
     await bot.send_message(message.chat.id, "어떤 거래소에서 볼까요?", reply_markup=markup)
 
@@ -94,7 +103,8 @@ async def add_alarm(message):
 """
 @bot.callback_query_handler(func=lambda call: call.data.startswith("addalarm1:"))
 async def ask_item(call):
-    item_name_list = db.get
+    exchange_code = call.data.
+    item_dic = db.get_item_dic()
     markup = InlineKeyboardMarkup()
     for item_name 
 """
