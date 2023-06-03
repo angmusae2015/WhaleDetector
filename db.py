@@ -75,7 +75,6 @@ def init_db(cur):
     )
     """)
 
-
 # 데이터베이스에서 등록된 채팅 ID인지 확인
 @db_handler
 def check_user(cur, chat_id):
@@ -149,6 +148,13 @@ def add_alarm(cur, chat_id, exchange_code, item_code, threshold):
     if get_alarm_id(chat_id, exchange_code, item_code, threshold) is None:
         item_id = get_item_id(exchange_code, item_code)
         cur.execute("""INSERT INTO Alarm (chat_id, item_id, threshold) VALUES ({0}, {1}, {2});""".format(chat_id, item_id, threshold))
+
+
+@db_handler # 거래소 목록 불러오기
+def get_exchange_dic(cur):
+    cur.execute("""SELECT * FROM Exchange""")
+
+    return {exchange[0]:exchange[1] for exchange in cur.fetchall()}
 
 
 # 거래소 이름 불러오기
