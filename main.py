@@ -46,10 +46,10 @@ async def send_whale_alarm(cur):
         orderbook = Orderbook(exchange_code, item_code)   # 종목 호가 데이터
 
         # 해당 종목을 알림 설정한 규칙 불러오기
-        cur.execute("""SELECT * FROM Alarm WHERE item_id={0};""".format(item_id))
+        cur.execute("""SELECT * FROM Alarm WHERE item_id={0} and alarm_enabled=1;""".format(item_id))
         alarm_list = cur.fetchall()
         for alarm in alarm_list:
-            alarm_id, chat_id, item_id, threshold = alarm
+            alarm_id, chat_id, item_id, threshold, alarm_enabled = alarm
             msg_list = orderbook.whale_alarm(threshold)  # 고래 알림 메시지 리스트
 
             # 알림 설정이 켜진 채팅에 알림 메시지 전송
@@ -75,7 +75,7 @@ async def start_alarm(message):
         db.change_alarm_state(message.chat.id)
 
         # 테스트를 위한 임의의 채팅 알림 규칙
-        db.add_alarm(message.chat.id, "upbit", "KRW-BTC", 2000000000)
+        db.add_alarm(message.chat.id, "upbit", "KRW-BTC", 2000000000, 1)
 
     else:
         await bot.send_message(message.chat.id, "이미 고래 알림이 켜져 있어요. 고래 알림을 받을 거래소와 종목을 알려주시면 알림을 보내드려요! '/stopalarm'으로 알림을 끌 수 있어요.")
@@ -109,7 +109,7 @@ async def add_alarm(message):
     await bot.send_message(message.chat.id, "거래소를 선택해주세요.", reply_markup=markup)
 
 
-"""
+
 @bot.callback_query_handler(func=lambda call: parse_callback(call.data)['context'] == 'addalarm1')
 async def ask_item(call):
     parameter = parse_callback(call.data)
@@ -118,9 +118,19 @@ async def ask_item(call):
 
     markup = InlineKeyboardMarkup() # 종목 선택 인라인 키보드
     for item in item_dic.keys():
-        markup.add(InlineKeyboardButton(text="{0}({1})".format(item_dic[item]['item_code'], item_dic[item]['item_name']), callback_data=call.data + "item=" + item_dic[item]['item_code']))
+        callback_dic = parameter.copy()
+        callback_dic['context'] = 'addalarm2'
+        callback_dic['item'] = item_dic[item]['item_code']
+        markup.add(InlineKeyboardButton(text="{0}({1})".format(item_dic[item]['item_code'], item_dic[item]['item_name']), callback_data=write_callback(callback_dic)))
     
     await bot.send_message(call.message.chat.id, "종목을 선택해주세요.", reply_markup=markup)
+
+
+"""
+@bot.callback_query_handler(func=lambda call: parse_callback(call.data)['context'] == 'addalarm2')
+async def ask_threshold(call):
+    parameter = parse_callback(call.data)
+    print(parameter['item'])
 """
 
 

@@ -59,7 +59,8 @@ def init_db(cur):
         alarm_id INTEGER PRIMARY KEY AUTOINCREMENT,
         chat_id INTEGER NOT NULL,
         item_id INTEGER NOT NULL,
-        threshold INTEGER NOT NULL,
+        threshold INTEGER,
+        alarm_enabled BOOLEAN NOT NULL DEFAULT 1,
 
         FOREIGN KEY (chat_id) REFERENCES User(chat_id) ON DELETE CASCADE,
         FOREIGN KEY (item_id) REFERENCES Item(item_id) ON DELETE CASCADE
@@ -145,7 +146,7 @@ def get_item_dic(cur, exchange_code=None, item_code=None, item_name=None):  # �
 # 채팅 알림 규칙 ID 불러오기
 @db_handler
 def get_alarm_id(cur, chat_id, exchange_code, item_code, threshold):
-    item_id = get_item_dic(exchange_code=exchange_code, item_code=item_code).keys()[0]
+    item_id = list(get_item_dic(exchange_code=exchange_code, item_code=item_code).keys())[0]
     cur.execute("""SELECT alarm_id FROM Alarm WHERE chat_id={0} and item_id={1} and threshold={2};""".format(chat_id, item_id, threshold))
     
     try:
@@ -156,10 +157,10 @@ def get_alarm_id(cur, chat_id, exchange_code, item_code, threshold):
 
 # 채팅 알림 규칙 등록
 @db_handler
-def add_alarm(cur, chat_id, exchange_code, item_code, threshold):
+def add_alarm(cur, chat_id, exchange_code, item_code, threshold=None, alarm_enabled=1):
     if get_alarm_id(chat_id, exchange_code, item_code, threshold) is None:
-        item_id = get_item_dic(exchange_code=exchange_code, item_code=item_code).keys()[0]
-        cur.execute("""INSERT INTO Alarm (chat_id, item_id, threshold) VALUES ({0}, {1}, {2});""".format(chat_id, item_id, threshold))
+        item_id = list(get_item_dic(exchange_code=exchange_code, item_code=item_code).keys())[0]
+        cur.execute("""INSERT INTO Alarm (chat_id, item_id, threshold, alarm_enabled) VALUES ({0}, {1}, {2}, {3});""".format(chat_id, item_id, threshold, alarm_enabled))
 
 
 @db_handler # 거래소 목록 불러오기
