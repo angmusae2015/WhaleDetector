@@ -82,17 +82,21 @@ async def end_alarm(message):
 # '/addalarm' 입력 시 알림 등록
 @bot.message_handler(commands=['addalarm'])
 async def add_alarm(message):
-    exchange_name_list = db.get_exchange_name() # 저장된 전체 거래소 목록
+    exchange_dic = db.get_exchange_dic() # 저장된 전체 거래소 목록
 
     markup = InlineKeyboardMarkup() # 거래소 선택 인라인 키보드
-    for exchange_name in exchange_name_list:
-        markup.add(InlineKeyboardButton(text=exchange_name, callback_data="exchange_name=" + exchange_name))    # 버튼 선택 시 콜백 데이터 전송
+    for exchange_code in exchange_dic.keys():
+        markup.add(InlineKeyboardButton(text=exchange_dic[exchange_code], callback_data="addalarm1:exchange=" + exchange_code))    # 버튼 선택 시 콜백 데이터로 거래소 코드 전송
     
     await bot.send_message(message.chat.id, "어떤 거래소에서 볼까요?", reply_markup=markup)
 
 
 """
-@bot.callback_query_handler(func=lambda call: call.data.startswith("exchange_name"))
+@bot.callback_query_handler(func=lambda call: call.data.startswith("addalarm1:"))
+async def ask_item(call):
+    item_name_list = db.get
+    markup = InlineKeyboardMarkup()
+    for item_name 
 """
 
 
