@@ -106,7 +106,7 @@ async def end_alarm(message):
 # '/addalarm' 입력 시 알림 등록
 # 먼저 알림을 받을 거래소를 선택
 @bot.message_handler(commands=['addalarm'])
-async def add_alarm(message):
+async def ask_exchange(message):
     exchange_dic = db.get_table_dic('exchange') # 저장된 전체 거래소 목록
 
     # 거래소 선택 키보드
@@ -314,7 +314,6 @@ async def get_channel_id(message):
 
     # 유저의 상태를 채널 이름 입력 대기 상태로 변경
     db.set_user_status(message.chat.id, 2)
-
 
 
 # 채널 이름 입력 시
