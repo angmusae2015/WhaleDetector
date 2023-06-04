@@ -170,6 +170,8 @@ async def ask_order_quantity(call):
 @bot.callback_query_handler(func=lambda call: parse_callback(call.data)['context'] == 'addalarm3')
 async def update_order_quantity_keyboard(call):
     parameter = parse_callback(call.data)
+
+    # 현재 주문량
     current_val = int(parameter['val'])
     
     # 주문량 입력 키보드
@@ -216,15 +218,14 @@ async def update_order_quantity_keyboard(call):
     await bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=int(call.message.message_id), reply_markup=markup)
 
 
-"""
 @bot.callback_query_handler(func=lambda call: parse_callback(call.data)['context'] == 'addalarm4')
 async def register_alarm(call):
     parameter = parse_callback(call.data)
     
-    db.add_alarm(chat_id=call.message.chat.id, exchange_code=parameter['ex'], item_code)
+    # 알림 등록
+    db.add_alarm(chat_id=call.message.chat.id, item_id=int(parameter['item']), threshold=int(parameter['val']))
     
     await bot.send_message(call.message.chat.id, "알림이 성공적으로 등록되었습니다.")
-"""
 
 
 # 알림을 보낼 채널 등록
