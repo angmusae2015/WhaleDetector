@@ -280,15 +280,8 @@ async def register_alarm(call):
     await bot.send_message(call.message.chat.id, "알림이 성공적으로 등록되었습니다.")
 
 
-# 대화 중단
-@bot.callback_query_handler(func=lambda call: parse_callback(call.data)['context'] == 'cancel')
-async def cancel_dialog(call):
-    await disable_keyboard(prev_message=call.message, text="취소됨")
-    db.set_user_status(call.message.chat.id, 0)
-
-
-# 알림을 보낼 채널 등록
-@bot.message_handler(commands=['addtochannel'])
+# '/addchannel': 알림을 보낼 채널 등록
+@bot.message_handler(commands=['addchannel'])
 async def add_to_channel(message):
     # 취소 키보드
     markup = InlineKeyboardMarkup()
@@ -331,6 +324,13 @@ async def set_channel_name(message):
 
     await bot.send_message(message.chat.id, "이 채널의 이름을 '{0}'으로 설정했어요!".format(message.text))
     db.set_user_status(message.chat.id, 0)  # 유저의 상태를 일반 상태로 변경
+
+
+# 대화 중단
+@bot.callback_query_handler(func=lambda call: parse_callback(call.data)['context'] == 'cancel')
+async def cancel_dialog(call):
+    await disable_keyboard(prev_message=call.message, text="취소됨")
+    db.set_user_status(call.message.chat.id, 0)
 
 
 aioschedule.every(30).seconds.do(send_whale_alarm)
