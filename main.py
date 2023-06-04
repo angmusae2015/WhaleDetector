@@ -109,7 +109,9 @@ async def end_alarm(message):
 async def add_alarm(message):
     exchange_dic = db.get_table_dic('exchange') # 저장된 전체 거래소 목록
 
-    markup = InlineKeyboardMarkup() # 거래소 선택 인라인 키보드
+    # 거래소 선택 키보드
+    markup = InlineKeyboardMarkup()
+
     for exchange_code in exchange_dic.keys():
         callback_dic = {
             'context': 'addalarm1',
@@ -117,8 +119,11 @@ async def add_alarm(message):
         }
 
         exchange_name = exchange_dic[exchange_code]['exchange_name']
-        markup.add(InlineKeyboardButton(text=exchange_name, callback_data=write_callback(callback_dic)))    # 버튼 선택 시 콜백 데이터로 거래소 코드 전송
+        markup.add(InlineKeyboardButton(text=exchange_name, callback_data=write_callback(callback_dic)))
     
+    # 취소 버튼
+    markup.add(InlineKeyboardButton(text="취소", callback_data="context=cancel"))
+
     await bot.send_message(message.chat.id, "거래소를 선택해주세요.", reply_markup=markup)
 
 
@@ -146,6 +151,9 @@ async def ask_item(call):
         callback_dic['item'] = item_id
         callback_dic.pop('ex')
         markup.add(InlineKeyboardButton(text="{0}({1})".format(item_dic[item_id]['item_code'], item_dic[item_id]['item_name']), callback_data=write_callback(callback_dic)))
+    
+    # 취소 버튼
+    markup.add(InlineKeyboardButton(text="취소", callback_data="context=cancel"))
     
     await bot.send_message(call.message.chat.id, "종목을 선택해주세요.", reply_markup=markup)
 
@@ -192,6 +200,9 @@ async def ask_order_quantity(call):
     markup.add(number_button, row_width=3)
     markup.add(sub_10k_button, sub_100k_button, sub_1m_button, row_width=3)
     markup.add(sub_10m_button, sub_100m_button, sub_1b_button, row_width=3)
+
+    # 취소 버튼
+    markup.add(InlineKeyboardButton(text="취소", callback_data="context=cancel"))
 
     # 주문량 입력 요청 메시지와 키보드 전송
     await bot.send_message(call.message.chat.id, "알림을 받을 주문량을 알려주세요. (100억 미만)", reply_markup=markup)
@@ -245,10 +256,14 @@ async def update_order_quantity_keyboard(call):
     if current_val != 0:
         markup.add(submit_button, row_width=3)
     
+    # 취소 버튼
+    markup.add(InlineKeyboardButton(text="취소", callback_data="context=cancel"))
+    
     # 메시지의 키보드를 수정하여 업데이트
     await bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=int(call.message.message_id), reply_markup=markup)
 
 
+# 알림 등록
 @bot.callback_query_handler(func=lambda call: parse_callback(call.data)['context'] == 'addalarm4')
 async def register_alarm(call):
     parameter = parse_callback(call.data)
@@ -265,9 +280,20 @@ async def register_alarm(call):
     await bot.send_message(call.message.chat.id, "알림이 성공적으로 등록되었습니다.")
 
 
+# 대화 중단
+@bot.callback_query_handler(func=lambda call: parse_callback(call.data)['context'] == 'cancel')
+async def cancel_dialog(call):
+    await disable_keyboard(prev_message=call.message, text="취소됨")
+    db.set_user_status(call.message.chat.id, 0)
+
+
 # 알림을 보낼 채널 등록
 @bot.message_handler(commands=['addtochannel'])
 async def add_to_channel(message):
+    # 취소 키보드
+    markup = InlineKeyboardMarkup()
+    markup.add(InlineKeyboardButton(text="취소", callback_data="context=cancel"))
+
     guide_msg = """제가 알림을 보내드릴 채널을 등록하시려면 채널의 아이디가 필요해요!
     1. 채널에 저를 초대해주세요.
     채널 우상단의 프로필 선택 > 편집 > 관리자 > 관리자 추가 > '고래잡이배' 검색 후 완료
@@ -276,9 +302,10 @@ async def add_to_channel(message):
     3. 원하는 공개 링크로 설정해주세요.
     4. 공개 링크를 저에게 보내주세요."""
     
-    await bot.send_message(message.chat.id, guide_msg)
+    await bot.send_message(message.chat.id, guide_msg, reply_markup=markup)
 
-    db.set_user_status(message.chat.id, 1)  # 유저의 상태를 채널 ID 입력 대기 상태로 변경
+    # 유저의 상태를 채널 ID 입력 대기 상태로 변경
+    db.set_user_status(message.chat.id, 1)
 
 
 # 유저의 상태가 채널 ID 입력 대기 상태일 때 채널 ID 입력 시
@@ -287,10 +314,13 @@ async def get_channel_id(message):
     channel_id = "@" + message.text.replace('https://t.me/', '')
     res = await bot.send_message(channel_id, "이 채널로 알림을 보내드릴게요! 채널은 다시 비공개로 변경하셔도 좋아요.")
 
-    db.add_channel(res.chat.id, message.chat.id)   # 채널 등록
+    # 채널 등록
+    db.add_channel(res.chat.id, message.chat.id)
 
-    await bot.send_message(message.chat.id, "이 채널의 이름을 알려주세요!")        
-    db.set_user_status(message.chat.id, 2)  # 유저의 상태를 채널 이름 입력 대기 상태로 변경
+    await bot.send_message(message.chat.id, "이 채널의 이름을 알려주세요!")
+
+    # 유저의 상태를 채널 이름 입력 대기 상태로 변경
+    db.set_user_status(message.chat.id, 2)
 
 
 
