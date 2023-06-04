@@ -114,9 +114,9 @@ async def add_alarm(message):
 async def ask_item(call):
     parameter = parse_callback(call.data)
     exchange_code = parameter['ex']
-    item_dic = db.get_item_dic(exchange_code=exchange_code) # 해당 거래소의 저장된 종목 목록
+    item_dic = db.get_item_dic(exchange_code=exchange_code)
+    markup = InlineKeyboardMarkup()
 
-    markup = InlineKeyboardMarkup() # 종목 선택 인라인 키보드
     for item in item_dic.keys():
         callback_dic = parameter.copy()
         callback_dic['context'] = 'addalarm2'
@@ -128,79 +128,90 @@ async def ask_item(call):
 
 # 알림을 받을 주문량 설정
 @bot.callback_query_handler(func=lambda call: parse_callback(call.data)['context'] == 'addalarm2')
-async def ask_threshold(call):
+async def ask_order_quantity(call):
     parameter = parse_callback(call.data)
-
     parameter['context'] = 'addalarm3'
-    
+
+    # 주문량 입력 키보드
     markup = InlineKeyboardMarkup()
+
+    # 주문량 증가 버튼
     add_10k_button = InlineKeyboardButton(text="+1만", callback_data=write_callback(parameter) + "?val={0}".format(10 ** 4))
     add_100k_button = InlineKeyboardButton(text="+10만", callback_data=write_callback(parameter) + "?val={0}".format(10 ** 5))
     add_1m_button = InlineKeyboardButton(text="+100만", callback_data=write_callback(parameter) + "?val={0}".format(10 ** 6))
-
     add_10m_button = InlineKeyboardButton(text="+1000만", callback_data=write_callback(parameter) + "?val={0}".format(10 ** 7))
     add_100m_button = InlineKeyboardButton(text="+1억", callback_data=write_callback(parameter) + "?val={0}".format(10 ** 8))
     add_1b_button = InlineKeyboardButton(text="+10억", callback_data=write_callback(parameter) + "?val={0}".format(10 ** 9))
 
-    number_button = InlineKeyboardButton(text="0만원", callback_data="context=None")    # 사용자가 현재 입력한 값
+    # 현재 주문량 표시 버튼
+    number_button = InlineKeyboardButton(text="0만원", callback_data="context=None")
 
+    # 주문량 감소 버튼
     sub_10k_button = InlineKeyboardButton(text="-1만", callback_data=write_callback(parameter) + "?val={0}".format(0))
     sub_100k_button = InlineKeyboardButton(text="-10만", callback_data=write_callback(parameter) + "?val={0}".format(0))
     sub_1m_button = InlineKeyboardButton(text="-100만", callback_data=write_callback(parameter) + "?val={0}".format(0))
-
     sub_10m_button = InlineKeyboardButton(text="-1000만", callback_data=write_callback(parameter) + "?val={0}".format(0))
     sub_100m_button = InlineKeyboardButton(text="-1억", callback_data=write_callback(parameter) + "?val={0}".format(0))
     sub_1b_button = InlineKeyboardButton(text="-10억", callback_data=write_callback(parameter) + "?val={0}".format(0))
 
+    # 키보드에 버튼 추가
     markup.add(add_10k_button, add_100k_button, add_1m_button, row_width=3)
     markup.add(add_10m_button, add_100m_button, add_1b_button, row_width=3)
     markup.add(number_button, row_width=3)
     markup.add(sub_10k_button, sub_100k_button, sub_1m_button, row_width=3)
     markup.add(sub_10m_button, sub_100m_button, sub_1b_button, row_width=3)
+
+    # 주문량 입력 요청 메시지와 키보드 전송
     await bot.send_message(call.message.chat.id, "알림을 받을 주문량을 알려주세요. (100억 미만)", reply_markup=markup)
 
 
 # 사용자가 누른 버튼에 따라 키보드 값 변경
 @bot.callback_query_handler(func=lambda call: parse_callback(call.data)['context'] == 'addalarm3')
-async def set_threshold(call):
+async def update_order_quantity_keyboard(call):
     parameter = parse_callback(call.data)
-
     current_val = int(parameter['val'])
     
+    # 주문량 입력 키보드
     markup = InlineKeyboardMarkup()
+
+    # 주문량 증가 버튼
     add_10k_button = InlineKeyboardButton(text="+1만", callback_data=write_callback(parameter) + "?val={0}".format(current_val + 10 ** 4))
     add_100k_button = InlineKeyboardButton(text="+10만", callback_data=write_callback(parameter) + "?val={0}".format(current_val + 10 ** 5))
     add_1m_button = InlineKeyboardButton(text="+100만", callback_data=write_callback(parameter) + "?val={0}".format(current_val + 10 ** 6))
-
     add_10m_button = InlineKeyboardButton(text="+1000만", callback_data=write_callback(parameter) + "?val={0}".format(current_val + 10 ** 7))
     add_100m_button = InlineKeyboardButton(text="+1억", callback_data=write_callback(parameter) + "?val={0}".format(current_val + 10 ** 8))
     add_1b_button = InlineKeyboardButton(text="+10억", callback_data=write_callback(parameter) + "?val={0}".format(current_val + 10 ** 9))
 
+    # 현재 주문량 표시 버튼
     number_button = InlineKeyboardButton(text=format(int(current_val / 10000), ',') + "만원", callback_data="context=None")
 
+    # 주문량 감소 버튼
     conditional_sub = lambda val, sub: val - sub if val > sub else 0
     sub_10k_button = InlineKeyboardButton(text="-1만", callback_data=write_callback(parameter) + "?val={0}".format(conditional_sub(current_val, 10 ** 4)))
     sub_100k_button = InlineKeyboardButton(text="-10만", callback_data=write_callback(parameter) + "?val={0}".format(conditional_sub(current_val, 10 ** 5)))
     sub_1m_button = InlineKeyboardButton(text="-100만", callback_data=write_callback(parameter) + "?val={0}".format(conditional_sub(current_val, 10 ** 6)))
-
     sub_10m_button = InlineKeyboardButton(text="-1000만", callback_data=write_callback(parameter) + "?val={0}".format(conditional_sub(current_val, 10 ** 7)))
     sub_100m_button = InlineKeyboardButton(text="-1억", callback_data=write_callback(parameter) + "?val={0}".format(conditional_sub(current_val, 10 ** 8)))
     sub_1b_button = InlineKeyboardButton(text="-10억", callback_data=write_callback(parameter) + "?val={0}".format(conditional_sub(current_val, 10 ** 9)))
 
+    # 최종 입력 버튼
     submit_parameter = parameter.copy()
     submit_parameter['context'] = 'addalarm4'
     submit_parameter['val'] = str(current_val)
-    submit_button = InlineKeyboardButton(text="입력", callback_data=write_callback(submit_parameter))   # 값 최종 입력 버튼
+    submit_button = InlineKeyboardButton(text="입력", callback_data=write_callback(submit_parameter))
 
+    # 키보드에 버튼 추가
     markup.add(add_10k_button, add_100k_button, add_1m_button, row_width=3)
     markup.add(add_10m_button, add_100m_button, add_1b_button, row_width=3)
     markup.add(number_button, row_width=3)
     markup.add(sub_10k_button, sub_100k_button, sub_1m_button, row_width=3)
     markup.add(sub_10m_button, sub_100m_button, sub_1b_button, row_width=3)
 
+    # 입력한 값이 0이 아닐 경우에만 입력 버튼 추가
     if current_val != 0:
-        markup.add(submit_button, row_width=3)  # 입력한 값이 0이 아닐 경우에만 입력 버튼 추가
+        markup.add(submit_button, row_width=3)
     
+    # 메시지의 키보드를 수정하여 업데이트
     await bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=int(call.message.message_id), reply_markup=markup)
 
 
