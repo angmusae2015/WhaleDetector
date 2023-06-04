@@ -115,12 +115,17 @@ def get_table_dic(cur, table_name, **kwargs):
 
     # 딕셔너리로 변환
     dic = {}
-    for line in cur.fetchall():
-        dic[line[0]] = {}
+    for row in cur.fetchall():
+        dic[row[0]] = {}
         for column in cur.description[1:]:
-            dic[line[0]][column[0]] = line[cur.description.index(column)]
+            dic[row[0]][column[0]] = row[cur.description.index(column)]
     
     return dic
+
+
+# 기본 키로 데이터 검색
+def get_row_by_key(table_name, primary_key):
+    return get_table_dic(table_name)[primary_key]
 
 
 # 콜백 데이터 등록
