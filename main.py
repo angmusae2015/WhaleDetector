@@ -27,6 +27,17 @@ def write_callback(dic):
     return "?".join(["{0}={1}".format(key, val) for key, val in dic.items()])
 
 
+# 키보드 비활성화
+async def disable_keyboard(prev_message, text):
+    # 이전 메시지 ID
+    message_id = prev_message.message_id
+
+    # 비활성화된 키보드 업데이트
+    disabled_keyboard_markup = InlineKeyboardMarkup()
+    disabled_keyboard_markup.add(InlineKeyboardButton(text=text, callback_data="context=None"))
+    await bot.edit_message_reply_markup(chat_id=prev_message.chat.id, message_id=int(message_id), reply_markup=disabled_keyboard_markup)
+
+
 token = get_token("token.txt")
 bot = AsyncTeleBot(token)
 
@@ -113,8 +124,17 @@ async def add_alarm(message):
 @bot.callback_query_handler(func=lambda call: parse_callback(call.data)['context'] == 'addalarm1')
 async def ask_item(call):
     parameter = parse_callback(call.data)
+
+    # 거래소 선택 키보드 비활성화
+    await disable_keyboard(prev_message=call.message, text=db.get_exchange_name(exchange_code=parameter['ex']))
+
+    # 선택한 거래소 코드
     exchange_code = parameter['ex']
+
+    # 선택한 거래소에 속한 모든 종목 정보
     item_dic = db.get_item_dic(exchange_code=exchange_code)
+
+    # 종목 선택 키보드
     markup = InlineKeyboardMarkup()
 
     for item_id in item_dic.keys():
@@ -132,6 +152,14 @@ async def ask_item(call):
 async def ask_order_quantity(call):
     parameter = parse_callback(call.data)
     parameter['context'] = 'addalarm3'
+
+    # 선택한 종목 정보
+    item_id = int(parameter['item'])
+    item_code = db.get_item_dic(item_id=item_id)[item_id]['item_code']
+    item_name = db.get_item_dic(item_id=item_id)[item_id]['item_name']
+
+    # 종목 선택 키보드 비활성화
+    await disable_keyboard(prev_message=call.message, text="{0}({1})".format(item_code, item_name))
 
     # 주문량 입력 키보드
     markup = InlineKeyboardMarkup()
@@ -221,9 +249,15 @@ async def update_order_quantity_keyboard(call):
 @bot.callback_query_handler(func=lambda call: parse_callback(call.data)['context'] == 'addalarm4')
 async def register_alarm(call):
     parameter = parse_callback(call.data)
+
+    # 입력한 주문량
+    val = int(parameter['val'])
+
+    # 주문량 입력 키보드 비활성화
+    await disable_keyboard(prev_message=call.message, text="{0}만원".format(int(val / 10000)))
     
     # 알림 등록
-    db.add_alarm(chat_id=call.message.chat.id, item_id=int(parameter['item']), threshold=int(parameter['val']))
+    db.add_alarm(chat_id=call.message.chat.id, item_id=int(parameter['item']), threshold=val)
     
     await bot.send_message(call.message.chat.id, "알림이 성공적으로 등록되었습니다.")
 
