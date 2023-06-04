@@ -159,7 +159,7 @@ def get_alarm_id(cur, chat_id, item_id, threshold):
 
 # 채팅 알림 규칙 등록
 @db_handler
-def add_alarm(cur, chat_id, item_id, threshold=None, alarm_enabled=1):
+def add_alarm(cur, chat_id, item_id, threshold, alarm_enabled=1):
     if get_alarm_id(chat_id=chat_id, item_id=item_id, threshold=threshold) is None:
         cur.execute("""INSERT INTO Alarm (chat_id, item_id, threshold, alarm_enabled) VALUES ({0}, {1}, {2}, {3});""".format(chat_id, item_id, threshold, alarm_enabled))
 
