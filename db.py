@@ -17,7 +17,7 @@ def db_handler(func):
 # 데이터베이스 초기화
 @db_handler
 def init_db(cur):
-    status_code = ["none", "waiting_for_channel_id", "waiting_for_channel_name", "waiting_for_alarm_threshold"]    # 채팅 상태 코드 리스트
+    status_code = ["none", "waiting_for_channel_id", "waiting_for_channel_name"]    # 채팅 상태 코드 리스트
 
     # 거래소 정보 테이블
     cur.execute("""CREATE TABLE Exchange (exchange_code TEXT PRIMARY KEY, exchange_name TEXT NOT NULL)""")
@@ -59,7 +59,7 @@ def init_db(cur):
         alarm_id INTEGER PRIMARY KEY AUTOINCREMENT,
         chat_id INTEGER NOT NULL,
         item_id INTEGER NOT NULL,
-        threshold INTEGER,
+        order_quantity INTEGER NOT NULL,
         alarm_enabled BOOLEAN NOT NULL DEFAULT 1,
 
         FOREIGN KEY (chat_id) REFERENCES User(chat_id) ON DELETE CASCADE,
@@ -148,8 +148,8 @@ def get_item_dic(cur, item_id=None, exchange_code=None, item_code=None, item_nam
 
 # 채팅 알림 규칙 ID 불러오기
 @db_handler
-def get_alarm_id(cur, chat_id, item_id, threshold):
-    cur.execute("""SELECT alarm_id FROM Alarm WHERE chat_id={0} and item_id={1} and threshold={2};""".format(chat_id, item_id, threshold))
+def get_alarm_id(cur, chat_id, item_id, order_quantity):
+    cur.execute("""SELECT alarm_id FROM Alarm WHERE chat_id={0} and item_id={1} and order_quantity={2};""".format(chat_id, item_id, order_quantity))
     
     try:
         return cur.fetchall()[0][0]
@@ -159,9 +159,9 @@ def get_alarm_id(cur, chat_id, item_id, threshold):
 
 # 채팅 알림 규칙 등록
 @db_handler
-def add_alarm(cur, chat_id, item_id, threshold, alarm_enabled=1):
-    if get_alarm_id(chat_id=chat_id, item_id=item_id, threshold=threshold) is None:
-        cur.execute("""INSERT INTO Alarm (chat_id, item_id, threshold, alarm_enabled) VALUES ({0}, {1}, {2}, {3});""".format(chat_id, item_id, threshold, alarm_enabled))
+def add_alarm(cur, chat_id, item_id, order_quantity, alarm_enabled=1):
+    if get_alarm_id(chat_id=chat_id, item_id=item_id, order_quantity=order_quantity) is None:
+        cur.execute("""INSERT INTO Alarm (chat_id, item_id, order_quantity, alarm_enabled) VALUES ({0}, {1}, {2}, {3});""".format(chat_id, item_id, order_quantity, alarm_enabled))
 
 
 # 거래소 목록 불러오기

@@ -60,8 +60,8 @@ async def send_whale_alarm(cur):
         cur.execute("""SELECT * FROM Alarm WHERE item_id={0} and alarm_enabled=1;""".format(item_id))
         alarm_list = cur.fetchall()
         for alarm in alarm_list:
-            alarm_id, chat_id, item_id, threshold, alarm_enabled = alarm
-            msg_list = orderbook.whale_alarm(threshold)  # 고래 알림 메시지 리스트
+            alarm_id, chat_id, item_id, order_quantity, alarm_enabled = alarm
+            msg_list = orderbook.whale_alarm(order_quantity)  # 고래 알림 메시지 리스트
 
             # 알림 설정이 켜진 채팅에 알림 메시지 전송
             if db.get_alarm_state(chat_id):
@@ -257,7 +257,7 @@ async def register_alarm(call):
     await disable_keyboard(prev_message=call.message, text="{0}만원".format(int(val / 10000)))
     
     # 알림 등록
-    db.add_alarm(chat_id=call.message.chat.id, item_id=int(parameter['item']), threshold=val)
+    db.add_alarm(chat_id=call.message.chat.id, item_id=int(parameter['item']), order_quantity=val)
     
     await bot.send_message(call.message.chat.id, "알림이 성공적으로 등록되었습니다.")
 
