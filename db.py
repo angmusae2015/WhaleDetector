@@ -1,3 +1,4 @@
+import time
 import sqlite3
 
 
@@ -76,8 +77,16 @@ def init_db(cur):
         user_id INTEGER NOT NULL,
 
         FOREIGN KEY (user_id) REFERENCES User(chat_id) ON DELETE CASCADE
-    )
-    """)
+    );""")
+
+    # 콜백 데이터 저장 테이블
+    cur.execute("""CREATE TABLE Callback (
+        callback_id TEXT PRIMARY KEY,
+        chat_id INTEGER NOT NULL,
+        callback_data TEXT,
+
+        FOREIGN KEY (chat_id) REFERENCES User(chat_id) ON DELETE CASCADE
+    );""")
 
 
 # 데이터베이스에서 테이블 딕셔너리로 반환
@@ -112,6 +121,23 @@ def get_table_dic(cur, table_name, **kwargs):
             dic[line[0]][column[0]] = line[cur.description.index(column)]
     
     return dic
+
+
+# 콜백 데이터 등록
+@db_handler
+def register_callback_data(chat_id, callback_data):
+    callback_id = "{0}-{1}".format(time.time(), chat_id)
+
+    cur.execute("""INSERT INTO Callback VALUES ('{0}', {1}, '{2}');""".format(callback_id, chat_id, callback_data))
+
+    # 등록된 콜백 데이터의 id 반환
+    return callback_id
+
+
+# 콜백 데이터 수정
+@db_handler
+def update_callback_data(callback_id, callback_data):
+    cur.execute("""UPDATE Callback SET callback_data='{0}' WHERE callback_id={1}""".format(callback_data, callback_id))
 
 
 # 데이터베이스에서 등록된 채팅 ID인지 확인
