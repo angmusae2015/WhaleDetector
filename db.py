@@ -163,7 +163,8 @@ def add_alarm(cur, chat_id, exchange_code, item_code, threshold=None, alarm_enab
         cur.execute("""INSERT INTO Alarm (chat_id, item_id, threshold, alarm_enabled) VALUES ({0}, {1}, {2}, {3});""".format(chat_id, item_id, threshold, alarm_enabled))
 
 
-@db_handler # 거래소 목록 불러오기
+# 거래소 목록 불러오기
+@db_handler
 def get_exchange_dic(cur):
     cur.execute("""SELECT * FROM Exchange""")
 
