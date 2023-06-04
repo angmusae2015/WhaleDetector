@@ -122,9 +122,12 @@ def change_alarm_state(cur, chat_id):
 
 # 종목 목록 불러오기
 @db_handler
-def get_item_dic(cur, exchange_code=None, item_code=None, item_name=None):  # 조건으로 거래소 코드, 종목 코드, 종목 이름 지정 가능
+def get_item_dic(cur, item_id=None, exchange_code=None, item_code=None, item_name=None):  # 조건으로 종목 ID, 거래소 코드, 종목 코드, 종목 이름 지정 가능
     command = """SELECT * FROM Item"""  # sql 명령문
-    if exchange_code != None or item_code != None or item_name != None:
+    if item_id != None:
+        command += " WHERE item_id={0}".format(item_id)
+    
+    elif exchange_code != None or item_code != None or item_name != None:
         command += " WHERE"
         condition = []
         if exchange_code != None:
@@ -145,8 +148,7 @@ def get_item_dic(cur, exchange_code=None, item_code=None, item_name=None):  # �
 
 # 채팅 알림 규칙 ID 불러오기
 @db_handler
-def get_alarm_id(cur, chat_id, exchange_code, item_code, threshold):
-    item_id = list(get_item_dic(exchange_code=exchange_code, item_code=item_code).keys())[0]
+def get_alarm_id(cur, chat_id, item_id, threshold):
     cur.execute("""SELECT alarm_id FROM Alarm WHERE chat_id={0} and item_id={1} and threshold={2};""".format(chat_id, item_id, threshold))
     
     try:
@@ -157,9 +159,8 @@ def get_alarm_id(cur, chat_id, exchange_code, item_code, threshold):
 
 # 채팅 알림 규칙 등록
 @db_handler
-def add_alarm(cur, chat_id, exchange_code, item_code, threshold=None, alarm_enabled=1):
-    if get_alarm_id(chat_id, exchange_code, item_code, threshold) is None:
-        item_id = list(get_item_dic(exchange_code=exchange_code, item_code=item_code).keys())[0]
+def add_alarm(cur, chat_id, item_id, threshold=None, alarm_enabled=1):
+    if get_alarm_id(chat_id=chat_id, item_id=item_id, threshold=threshold) is None:
         cur.execute("""INSERT INTO Alarm (chat_id, item_id, threshold, alarm_enabled) VALUES ({0}, {1}, {2}, {3});""".format(chat_id, item_id, threshold, alarm_enabled))
 
 

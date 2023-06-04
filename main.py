@@ -75,7 +75,7 @@ async def start_alarm(message):
         db.change_alarm_state(message.chat.id)
 
         # 테스트를 위한 임의의 채팅 알림 규칙
-        db.add_alarm(message.chat.id, "upbit", "KRW-BTC", 2000000000, 1)
+        db.add_alarm(message.chat.id, 1, 2000000000, 1)
 
     else:
         await bot.send_message(message.chat.id, "이미 고래 알림이 켜져 있어요. 고래 알림을 받을 거래소와 종목을 알려주시면 알림을 보내드려요! '/stopalarm'으로 알림을 끌 수 있어요.")
@@ -117,11 +117,12 @@ async def ask_item(call):
     item_dic = db.get_item_dic(exchange_code=exchange_code)
     markup = InlineKeyboardMarkup()
 
-    for item in item_dic.keys():
+    for item_id in item_dic.keys():
         callback_dic = parameter.copy()
         callback_dic['context'] = 'addalarm2'
-        callback_dic['item'] = item
-        markup.add(InlineKeyboardButton(text="{0}({1})".format(item_dic[item]['item_code'], item_dic[item]['item_name']), callback_data=write_callback(callback_dic)))
+        callback_dic['item'] = item_id
+        callback_dic.pop('ex')
+        markup.add(InlineKeyboardButton(text="{0}({1})".format(item_dic[item_id]['item_code'], item_dic[item_id]['item_name']), callback_data=write_callback(callback_dic)))
     
     await bot.send_message(call.message.chat.id, "종목을 선택해주세요.", reply_markup=markup)
 
@@ -213,6 +214,17 @@ async def update_order_quantity_keyboard(call):
     
     # 메시지의 키보드를 수정하여 업데이트
     await bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=int(call.message.message_id), reply_markup=markup)
+
+
+"""
+@bot.callback_query_handler(func=lambda call: parse_callback(call.data)['context'] == 'addalarm4')
+async def register_alarm(call):
+    parameter = parse_callback(call.data)
+    
+    db.add_alarm(chat_id=call.message.chat.id, exchange_code=parameter['ex'], item_code)
+    
+    await bot.send_message(call.message.chat.id, "알림이 성공적으로 등록되었습니다.")
+"""
 
 
 # 알림을 보낼 채널 등록
