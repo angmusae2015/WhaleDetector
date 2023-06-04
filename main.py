@@ -107,7 +107,7 @@ async def end_alarm(message):
 # 먼저 알림을 받을 거래소를 선택
 @bot.message_handler(commands=['addalarm'])
 async def add_alarm(message):
-    exchange_dic = db.get_exchange_dic() # 저장된 전체 거래소 목록
+    exchange_dic = db.get_table_dic('exchange') # 저장된 전체 거래소 목록
 
     markup = InlineKeyboardMarkup() # 거래소 선택 인라인 키보드
     for exchange_code in exchange_dic.keys():
@@ -115,7 +115,9 @@ async def add_alarm(message):
             'context': 'addalarm1',
             'ex': exchange_code
         }
-        markup.add(InlineKeyboardButton(text=exchange_dic[exchange_code], callback_data=write_callback(callback_dic)))    # 버튼 선택 시 콜백 데이터로 거래소 코드 전송
+
+        exchange_name = exchange_dic[exchange_code]['exchange_name']
+        markup.add(InlineKeyboardButton(text=exchange_name, callback_data=write_callback(callback_dic)))    # 버튼 선택 시 콜백 데이터로 거래소 코드 전송
     
     await bot.send_message(message.chat.id, "거래소를 선택해주세요.", reply_markup=markup)
 
@@ -125,14 +127,15 @@ async def add_alarm(message):
 async def ask_item(call):
     parameter = parse_callback(call.data)
 
-    # 거래소 선택 키보드 비활성화
-    await disable_keyboard(prev_message=call.message, text=db.get_exchange_name(exchange_code=parameter['ex']))
-
-    # 선택한 거래소 코드
+    # 선택한 거래소 코드와 이름
     exchange_code = parameter['ex']
+    exchange_name = db.get_table_dic('exchange', exchange_code=exchange_code)[exchange_code]['exchange_name']
+
+    # 거래소 선택 키보드 비활성화
+    await disable_keyboard(prev_message=call.message, text=exchange_name)
 
     # 선택한 거래소에 속한 모든 종목 정보
-    item_dic = db.get_item_dic(exchange_code=exchange_code)
+    item_dic = db.get_table_dic('item', exchange_code=exchange_code)
 
     # 종목 선택 키보드
     markup = InlineKeyboardMarkup()
@@ -155,8 +158,8 @@ async def ask_order_quantity(call):
 
     # 선택한 종목 정보
     item_id = int(parameter['item'])
-    item_code = db.get_item_dic(item_id=item_id)[item_id]['item_code']
-    item_name = db.get_item_dic(item_id=item_id)[item_id]['item_name']
+    item_code = db.get_table_dic('item', item_id=item_id)[item_id]['item_code']
+    item_name = db.get_table_dic('item', item_id=item_id)[item_id]['item_name']
 
     # 종목 선택 키보드 비활성화
     await disable_keyboard(prev_message=call.message, text="{0}({1})".format(item_code, item_name))

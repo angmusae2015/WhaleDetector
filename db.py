@@ -20,7 +20,10 @@ def init_db(cur):
     status_code = ["none", "waiting_for_channel_id", "waiting_for_channel_name"]    # 채팅 상태 코드 리스트
 
     # 거래소 정보 테이블
-    cur.execute("""CREATE TABLE Exchange (exchange_code TEXT PRIMARY KEY, exchange_name TEXT NOT NULL)""")
+    cur.execute("""CREATE TABLE Exchange (
+        exchange_code TEXT PRIMARY KEY,
+        exchange_name TEXT NOT NULL
+        );""")
     cur.execute("""INSERT INTO Exchange VALUES ("upbit", "업비트");""")
     cur.execute("""INSERT INTO Exchange VALUES ("binance", "바이낸스");""")
 
@@ -76,6 +79,41 @@ def init_db(cur):
     )
     """)
 
+
+# 데이터베이스에서 테이블 딕셔너리로 반환
+# table_name: 테이블 이름, kwargs: 조건
+@db_handler
+def get_table_dic(cur, table_name, **kwargs):
+    # 컬럼 조회 기능 추가 예정
+    # column = ', '.join(args)
+    # command = "SELECT {0} FROM {1}".format(column, table_name)
+
+    command = "SELECT * FROM {0}".format(table_name)
+    
+    # 조건 지정
+    condition = []
+    for key, value in kwargs.items():
+        if type(value) == int or type(value) == float:
+            condition.append(" {0}={1}".format(key, value))
+        elif type(value) == str:
+            condition.append(" {0}='{1}'".format(key, value))
+    
+    if len(condition) > 0:
+        command += " WHERE" + ' and'.join(condition)
+    
+    # 명령문 실행
+    cur.execute(command)
+
+    # 딕셔너리로 변환
+    dic = {}
+    for line in cur.fetchall():
+        dic[line[0]] = {}
+        for column in cur.description[1:]:
+            dic[line[0]][column[0]] = line[cur.description.index(column)]
+    
+    return dic
+
+
 # 데이터베이스에서 등록된 채팅 ID인지 확인
 @db_handler
 def check_user(cur, chat_id):
@@ -120,32 +158,6 @@ def change_alarm_state(cur, chat_id):
     cur.execute("""UPDATE User SET option={0} WHERE chat_id={1};""".format(not state, chat_id))
 
 
-# 종목 목록 불러오기
-@db_handler
-def get_item_dic(cur, item_id=None, exchange_code=None, item_code=None, item_name=None):  # 조건으로 종목 ID, 거래소 코드, 종목 코드, 종목 이름 지정 가능
-    command = """SELECT * FROM Item"""  # sql 명령문
-    if item_id != None:
-        command += " WHERE item_id={0}".format(item_id)
-    
-    elif exchange_code != None or item_code != None or item_name != None:
-        command += " WHERE"
-        condition = []
-        if exchange_code != None:
-            condition.append(""" exchange_code='{0}'""".format(exchange_code))
-        
-        if item_code != None:
-            condition.append(""" item_code='{0}'""".format(item_code))
-
-        if item_name != None:
-            condition.append(""" item_name='{0}'""".format(item_name))
-        
-        command += 'and'.join(condition)
-            
-    cur.execute(command)
-
-    return {item[0]:{'exchange_code': item[1], 'item_code': item[2], 'item_name': item[3]} for item in cur.fetchall()}
-
-
 # 채팅 알림 규칙 ID 불러오기
 @db_handler
 def get_alarm_id(cur, chat_id, item_id, order_quantity):
@@ -162,30 +174,6 @@ def get_alarm_id(cur, chat_id, item_id, order_quantity):
 def add_alarm(cur, chat_id, item_id, order_quantity, alarm_enabled=1):
     if get_alarm_id(chat_id=chat_id, item_id=item_id, order_quantity=order_quantity) is None:
         cur.execute("""INSERT INTO Alarm (chat_id, item_id, order_quantity, alarm_enabled) VALUES ({0}, {1}, {2}, {3});""".format(chat_id, item_id, order_quantity, alarm_enabled))
-
-
-# 거래소 목록 불러오기
-@db_handler
-def get_exchange_dic(cur):
-    cur.execute("""SELECT * FROM Exchange""")
-
-    return {exchange[0]:exchange[1] for exchange in cur.fetchall()}
-
-
-# 거래소 이름 불러오기
-@db_handler
-def get_exchange_name(cur, exchange_code=None):
-    if exchange_code is None:
-        cur.execute("""SELECT exchange_name FROM Exchange""")   # 매개변수 exchange_code가 None일 경우 모든 거래소 이름 반환
-
-        return [name[0] for name in cur.fetchall()]
-    else:
-        cur.execute("""SELECT exchange_name FROM Exchange WHERE exchange_code='{0}'""".format(exchange_code)) # 값이 있을 경우 해당 거래소 이름 반환
-
-        try:
-            return cur.fetchall()[0][0]
-        except IndexError:
-            return None
 
 
 # 채널 추가
