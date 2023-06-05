@@ -81,7 +81,7 @@ def init_db(cur):
 
     # 콜백 데이터 저장 테이블
     cur.execute("""CREATE TABLE Callback (
-        callback_id TEXT PRIMARY KEY,
+        callback_id INTEGER PRIMARY KEY AUTOINCREMENT,
         chat_id INTEGER NOT NULL,
         callback_data TEXT,
 
@@ -130,19 +130,29 @@ def get_row_by_key(table_name, primary_key):
 
 # 콜백 데이터 등록
 @db_handler
-def register_callback_data(chat_id, callback_data):
-    callback_id = "{0}-{1}".format(time.time(), chat_id)
+def register_callback_data(cur, chat_id, callback_data=""):
+    cur.execute("""INSERT INTO Callback (chat_id, callback_data) VALUES ({0}, '{1}');""".format(chat_id, callback_data))
+    cur.execute("""SELECT LAST_INSERT_ROWID();""")
 
-    cur.execute("""INSERT INTO Callback VALUES ('{0}', {1}, '{2}');""".format(callback_id, chat_id, callback_data))
+    callback_id = cur.fetchall()[0][0]
 
-    # 등록된 콜백 데이터의 id 반환
     return callback_id
 
 
 # 콜백 데이터 수정
 @db_handler
-def update_callback_data(callback_id, callback_data):
-    cur.execute("""UPDATE Callback SET callback_data='{0}' WHERE callback_id={1}""".format(callback_data, callback_id))
+def update_callback_data(cur, callback_id, **kwargs):
+    callback_data = get_row_by_key('callback', callback_id)['callback_data']
+    if callback_data != "":
+        callback_data += '?'
+
+    for key, val in kwargs.items():
+        if type(val) == str:
+            callback_data += "{0}=\"{1}".format(key, val)
+        else:
+            callback_data += "{0}={1}".format(key, val)
+            
+    cur.execute("""UPDATE Callback SET callback_data=\'{0}\' WHERE callback_id={1}""".format(callback_data, callback_id))
 
 
 # 데이터베이스에서 등록된 채팅 ID인지 확인
@@ -176,8 +186,11 @@ def set_user_status(cur, chat_id, status_id):
 # 채팅 고래 알림 설정 확인
 @db_handler
 def get_alarm_state(cur, chat_id):
-    cur.execute("""SELECT option FROM User WHERE chat_id={0};""".format(chat_id))
-    return cur.fetchall()[0][0]
+    try:
+        cur.execute("""SELECT option FROM User WHERE chat_id={0};""".format(chat_id))
+        return cur.fetchall()[0][0]
+    except IndexError:
+        return 1
 
 
 # 채팅 고래 알림 설정 변경
