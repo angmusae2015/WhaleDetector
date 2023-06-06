@@ -18,6 +18,7 @@ def db_handler(func):
 @db_handler
 def execute(cur, command):
     cur.execute(command)
+    return cur.fetchall()
 
 
 # 데이터베이스 초기화
