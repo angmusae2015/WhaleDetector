@@ -123,7 +123,7 @@ def get_table_dic(cur, table_name, **kwargs):
     dic = {}
     for row in cur.fetchall():
         dic[row[0]] = {}
-        for column in cur.description[1:]:
+        for column in cur.description:
             dic[row[0]][column[0]] = row[cur.description.index(column)]
     
     return dic
