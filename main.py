@@ -179,7 +179,7 @@ async def ask_exchange_by_command(message):
         callback_dic = {
             'context': 'addalarm1',
             'id': callback_id,
-            'exchange': exchange_code
+            'exchange_code': exchange_code
         }
 
         exchange_name = db.get_row_by_key('exchange', exchange_code)['exchange_name']
