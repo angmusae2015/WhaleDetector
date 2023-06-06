@@ -15,6 +15,11 @@ def db_handler(func):
     return wrapper
 
 
+@db_handler
+def execute(cur, command):
+    cur.execute(command)
+
+
 # 데이터베이스 초기화
 @db_handler
 def init_db(cur):
