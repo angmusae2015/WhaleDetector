@@ -168,7 +168,7 @@ async def ask_exchange_by_callback(call):
 # 알림을 받을 거래소를 선택
 @bot.message_handler(commands=['addalarm'])
 async def ask_exchange_by_command(message):
-    callback_id = db.register_callback_data(call.message.chat.id)
+    callback_id = db.register_callback_data(message.chat.id)
 
     exchange_dic = db.get_table_dic('exchange')
 
