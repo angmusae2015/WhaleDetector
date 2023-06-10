@@ -1,5 +1,217 @@
+from databasetypes import *
 import time
 import sqlite3
+
+
+class ResultSet:
+    def __init__(self, column: list, result_set: list):
+        self.column = column
+        self.result_set = result_set
+
+
+    def to_dict(self) -> dict:
+        dic = {}
+        for row in self.result_set:
+            primary_key = row[0]
+            dic[primary_key] = {key:val for key, val in zip(self.column, row)}
+
+        return dic
+
+
+class Database:
+    def __init__(self, db_path: str):
+        self.db_path = db_path
+        self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
+        self.cursor = self.conn.cursor()
+
+    
+    def execute(self, query: str) -> ResultSet:
+        # 디버그용 코드
+        print("================")
+        print(f"Query: {query}")
+        
+        self.cursor.execute(query)
+        self.conn.commit()
+
+        try:
+            column = [tu[0] for tu in self.cursor.description]
+            result_set = self.cursor.fetchall()
+
+            # 디버그용 코드
+            print(f"Result: {result_set}")
+        except TypeError:
+            return ResultSet([], [])
+        else:
+            return ResultSet(column, result_set)
+
+    
+    def get_columns(self, table_name: str) -> list:
+        result_set = self.execute(f"PRAGMA table_info({table_name});")
+
+        return [row[1] for row in result_set.result_set]
+
+
+    def select(self, table_name: str, **kwargs) -> ResultSet:
+        query = f"SELECT * FROM {table_name}"
+    
+        # 조건 지정
+        condition = []
+        for key, value in kwargs.items():
+            if type(value) == int or type(value) == float:
+                condition.append(f" {key}={value}")
+            elif type(value) == str:
+                condition.append(f" {key}='{value}'")
+        
+        if len(condition) > 0:
+            query += " WHERE" + ' AND'.join(condition)
+
+        return self.execute(query)
+    
+
+    def insert(self, table_name: str, **kwargs) -> int:
+        column_list_state = f" ({', '.join(kwargs.keys())})"
+
+        value_list = []
+        for value in kwargs.values():
+            if type(value) == str:
+                value_list.append(f"'{value}'")
+            else:
+                value_list.append(f"{value}")
+
+        query = f"INSERT INTO {table_name}{column_list_state} VALUES ({', '.join(value_list)});"
+
+        self.execute(query)
+        id = self.execute("SELECT last_insert_rowid();").result_set[0][0]
+        
+        return id
+
+    
+    def update(self, table_name: str, id: int, **kwargs):
+        assignment_list = []
+        for key, val in kwargs.items():
+            if type(val) == str:
+                assignment_list.append(f"{key}='{val}'")
+            else:
+                assignment_list.append(f"{key}={val}")
+
+        assignment_state = ', '.join(assignment_list)
+        primary_key_column = self.get_columns(table_name)[0]
+
+        query = f"UPDATE {table_name} SET {assignment_state} WHERE {primary_key_column}={id}"
+
+        self.execute(query)
+
+    
+    def delete(self, table_name: str, **kwargs):
+        query = f"DELETE FROM {table_name}"
+
+        condition_list = []
+        for key, value in kwargs.items():
+            if type(value) == int or type(value) == float:
+                condition_list.append(f" {key}={value}")
+            elif type(value) == str:
+                condition_list.append(f" {key}='{value}'")
+
+        if len(condition_list) > 0:
+            query += " WHERE" + ' AND'.join(condition_list)
+
+        self.execute(query)    
+
+
+    def get_by_primary_key(self, table_name: str, primary_key: int):
+        return self.select(table_name).to_dict()[primary_key]
+
+
+    def is_exists(self, table_name: str, primary_key: int) -> bool:
+        primary_key_column = self.get_columns(table_name)[0]
+        query = f"SELECT EXISTS(SELECT * FROM {table_name} WHERE {primary_key_column}={primary_key});"
+        result_set = self.execute(query)
+
+        return bool(result_set.result_set[0][0])
+
+    
+    def is_chat_exists(self, id: int) -> bool:
+        return self.is_exists('Chat', id)
+
+    
+    def is_channel_exists(self, id: int) -> bool:
+        return self.is_exists('Channel', id)
+
+    
+    def is_alarm_exists(self, id: int) -> bool:
+        return self.is_exists('Alarm', id)
+
+    
+    def is_channel_alarm_exists(self, id: int) -> bool:
+        return self.is_exists('ChannelAlarm', id)
+
+
+    def get_item(self, id: int) -> Item:
+        return Item(self, id)
+
+
+    def get_exchange(self, id: int) -> Exchange:
+        return Exchange(self, id)
+
+    
+    def get_every_exchange(self) -> list:
+        exchange_dict = self.select('Exchange').to_dict()
+        
+        return [Exchange(self, id) for id in exchange_dict.keys()]
+
+    
+    def get_chat(self, id: int) -> Chat:
+        return Chat(self, id)
+
+    
+    def get_every_chat(self) -> list:
+        chat_dict = self.select('Chat').to_dict()
+
+        return [Chat(self, id) for id in chat_dict.keys()]
+    
+
+    def get_channel(self, id: int) -> Channel:
+        return Channel(self, id)
+    
+
+    def get_alarm(self, id: int) -> Alarm:
+        return Alarm(self, id)
+    
+
+    def get_channel_alarm(self, id: int) -> ChannelAlarm:
+        return ChannelAlarm(self, id)
+
+    
+    def add_chat(self, id: int, alarm_option=True, status=0, buffer="") -> int:
+        return self.insert('Chat', ChatID=id, AlarmOption=alarm_option, ChatStatus=status, ChatBuffer=buffer)
+
+    
+    def add_channel(self, id: int, name: str, chat_id: int, alarm_option=True) -> int:
+        return self.insert('Channel', ChannelID=id, ChannelName=name, ChatID=chat_id, AlarmOption=alarm_option)
+
+
+    def add_alarm(self, chat_id: int, item_id: int, order_quantity: int, enabled=True) -> int:
+        return self.insert('Alarm', ChatID=chat_id, ItemID=item_id, OrderQuantity=order_quantity, IsEnabled=enabled)
+
+
+    def add_channel_alarm(self, channel_id: int, item_id: int, order_quantity: int, enabled=True) -> int:
+        return self.insert('ChannelAlarm', ChannelID=channel_id, ItemID=item_id, OrderQuantity=order_quantity, IsEnabled=enabled)
+
+    
+    def remove_chat(self, id: int):
+        self.delete('Chat', ChatID=id)
+    
+
+    def remove_channel(self, id: int):
+        self.delete('Channel', ChannelID=id)
+
+    
+    def remove_alarm(self, id: int):
+        self.delete('Alarm', AlarmID=id)
+
+    
+    def remove_channel_alarm(self, id: int):
+        self.delete('ChannelAlarm', ChannelAlarmID=id)
 
 
 def db_handler(func):
@@ -15,232 +227,8 @@ def db_handler(func):
     return wrapper
 
 
+# SQL 쿼리문 실행
 @db_handler
 def execute(cur, command):
     cur.execute(command)
-    return cur.fetchall()
-
-
-# 데이터베이스 초기화
-@db_handler
-def init_db(cur):
-    status_code = ["none", "waiting_for_channel_id", "waiting_for_channel_name"]    # 채팅 상태 코드 리스트
-
-    # 거래소 정보 테이블
-    cur.execute("""CREATE TABLE Exchange (
-        exchange_code TEXT PRIMARY KEY,
-        exchange_name TEXT NOT NULL
-        );""")
-    cur.execute("""INSERT INTO Exchange VALUES ("upbit", "업비트");""")
-    cur.execute("""INSERT INTO Exchange VALUES ("binance", "바이낸스");""")
-
-    # 종목 정보 테이블
-    cur.execute("""CREATE TABLE Item (
-        item_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        exchange_code TEXT NOT NULL,
-        item_code TEXT NOT NULL,
-        item_name TEXT NOT NULL,
-
-        FOREIGN KEY (exchange_code) REFERENCES Exchange(exchange_code) ON DELETE CASCADE
-        );""")
-    cur.execute("""INSERT INTO Item (exchange_code, item_code, item_name) VALUES ("upbit", "KRW-BTC", "비트코인");""")
-
-    # 채팅 상태 테이블
-    cur.execute("""CREATE TABLE Status (
-        status_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        status_code TEXT
-        );""")
-
-    # 채팅 상태 코드 입력
-    for code in status_code:
-        cur.execute("""INSERT INTO Status VALUES ({0}, "{1}");""".format(status_code.index(code), code))
-
-    # 유저(채팅) 설정 테이블
-    cur.execute("""CREATE TABLE User (
-        chat_id INTEGER PRIMARY KEY,
-        option BOOLEAN NOT NULL,
-        status_id INTEGER DEFAULT 0,
-
-        FOREIGN KEY (status_id) REFERENCES Status(status_id) ON DELETE CASCADE
-        );""")
-    
-    # 알림 설정 규칙 테이블
-    cur.execute("""CREATE TABLE Alarm (
-        alarm_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        chat_id INTEGER NOT NULL,
-        item_id INTEGER NOT NULL,
-        order_quantity INTEGER NOT NULL,
-        alarm_enabled BOOLEAN NOT NULL DEFAULT 1,
-
-        FOREIGN KEY (chat_id) REFERENCES User(chat_id) ON DELETE CASCADE,
-        FOREIGN KEY (item_id) REFERENCES Item(item_id) ON DELETE CASCADE
-        );""")
-
-    # 채널 정보 테이블
-    cur.execute("""CREATE TABLE Channel (
-        channel_id INTEGER PRIMARY KEY,
-        channel_name TEXT,
-        user_id INTEGER NOT NULL,
-
-        FOREIGN KEY (user_id) REFERENCES User(chat_id) ON DELETE CASCADE
-    );""")
-
-    # 콜백 데이터 저장 테이블
-    cur.execute("""CREATE TABLE Callback (
-        callback_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        chat_id INTEGER NOT NULL,
-        callback_data TEXT,
-
-        FOREIGN KEY (chat_id) REFERENCES User(chat_id) ON DELETE CASCADE
-    );""")
-
-
-# 데이터베이스에서 테이블 딕셔너리로 반환
-# table_name: 테이블 이름, kwargs: 조건
-@db_handler
-def get_table_dic(cur, table_name, **kwargs):
-    # 컬럼 조회 기능 추가 예정
-    # column = ', '.join(args)
-    # command = "SELECT {0} FROM {1}".format(column, table_name)
-
-    command = "SELECT * FROM {0}".format(table_name)
-    
-    # 조건 지정
-    condition = []
-    for key, value in kwargs.items():
-        if type(value) == int or type(value) == float:
-            condition.append(" {0}={1}".format(key, value))
-        elif type(value) == str:
-            condition.append(" {0}='{1}'".format(key, value))
-    
-    if len(condition) > 0:
-        command += " WHERE" + ' and'.join(condition)
-    
-    # 명령문 실행
-    cur.execute(command)
-
-    # 딕셔너리로 변환
-    dic = {}
-    for row in cur.fetchall():
-        dic[row[0]] = {}
-        for column in cur.description:
-            dic[row[0]][column[0]] = row[cur.description.index(column)]
-    
-    return dic
-
-
-# 기본 키로 데이터 검색
-def get_row_by_key(table_name, primary_key):
-    return get_table_dic(table_name)[primary_key]
-
-
-# 콜백 데이터 등록
-@db_handler
-def register_callback_data(cur, chat_id, callback_data=""):
-    cur.execute("""INSERT INTO Callback (chat_id, callback_data) VALUES ({0}, '{1}');""".format(chat_id, callback_data))
-    cur.execute("""SELECT LAST_INSERT_ROWID();""")
-
-    callback_id = cur.fetchall()[0][0]
-
-    return callback_id
-
-
-# 콜백 데이터 수정
-@db_handler
-def update_callback_data(cur, callback_id, **kwargs):
-    callback_data = get_row_by_key('callback', callback_id)['callback_data']
-    if callback_data != "":
-        callback_data += '?'
-
-    for key, val in kwargs.items():
-        if type(val) == str:
-            callback_data += "{0}=\"{1}".format(key, val)
-        else:
-            callback_data += "{0}={1}".format(key, val)
-            
-    cur.execute("""UPDATE Callback SET callback_data=\'{0}\' WHERE callback_id={1}""".format(callback_data, callback_id))
-
-
-# 데이터베이스에서 등록된 채팅 ID인지 확인
-@db_handler
-def check_user(cur, chat_id):
-    cur.execute("""SELECT * FROM User WHERE chat_id={0};""".format(chat_id))
-
-    return (len(cur.fetchall()) > 0)
-
-
-# 데이터베이스에 채팅 ID 추가
-@db_handler
-def add_user(cur, chat_id):
-    cur.execute("""INSERT INTO User VALUES ({0}, {1}, {1});""".format(chat_id, 0))
-
-
-# 유저 상태 불러오기
-@db_handler
-def get_user_status(cur, chat_id):
-    cur.execute("""SELECT status_id FROM User WHERE chat_id={0}""".format(chat_id))
-    
-    return cur.fetchall()[0][0]
-
-
-# 유저 상태 변경
-@db_handler
-def set_user_status(cur, chat_id, status_id):
-    cur.execute("""UPDATE User SET status_id={0} WHERE chat_id={1}""".format(status_id, chat_id))
-
-
-# 채팅 고래 알림 설정 확인
-@db_handler
-def get_alarm_state(cur, chat_id):
-    try:
-        cur.execute("""SELECT option FROM User WHERE chat_id={0};""".format(chat_id))
-        return cur.fetchall()[0][0]
-    except IndexError:
-        return 1
-
-
-# 채팅 고래 알림 설정 변경
-@db_handler
-def change_alarm_state(cur, chat_id):
-    cur.execute("""SELECT option FROM User WHERE chat_id={0};""".format(chat_id))
-    state = cur.fetchall()[0][0]
-
-    cur.execute("""UPDATE User SET option={0} WHERE chat_id={1};""".format(not state, chat_id))
-
-
-# 채팅 알림 규칙 ID 불러오기
-@db_handler
-def get_alarm_id(cur, chat_id, item_id, order_quantity):
-    cur.execute("""SELECT alarm_id FROM Alarm WHERE chat_id={0} and item_id={1} and order_quantity={2};""".format(chat_id, item_id, order_quantity))
-    
-    try:
-        return cur.fetchall()[0][0]
-    except IndexError:
-        return None
-
-
-# 채팅 알림 규칙 등록
-@db_handler
-def add_alarm(cur, chat_id, item_id, order_quantity, alarm_enabled=1):
-    if get_alarm_id(chat_id=chat_id, item_id=item_id, order_quantity=order_quantity) is None:
-        cur.execute("""INSERT INTO Alarm (chat_id, item_id, order_quantity, alarm_enabled) VALUES ({0}, {1}, {2}, {3});""".format(chat_id, item_id, order_quantity, alarm_enabled))
-
-
-# 채널 추가
-@db_handler
-def add_channel(cur, channel_id, chat_id):
-    cur.execute("""INSERT INTO channel VALUES ({0}, '{1}', {1})""".format(channel_id, chat_id))  # channel_name은 임시로 유저의 chat_id로 설정
-
-
-# 채널 이름 설정
-@db_handler
-def set_channel_name(cur, channel_name, chat_id):
-    cur.execute("""UPDATE channel SET channel_name='{0}' WHERE channel_name='{1}'""".format(channel_name, chat_id))
-
-
-# 유저의 채널 불러오기
-@db_handler
-def get_channels_by_user(cur, chat_id: int):
-    cur.execute("""SELECT channel_id, channel_name FROM channel WHERE user_id={0}""".format(chat_id))
-
     return cur.fetchall()
