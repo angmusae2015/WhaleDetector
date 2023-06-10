@@ -31,7 +31,6 @@ bot = AsyncTeleBot(token)
 DB = db.Database("database.db")
 
 
-
 # 고래를 감시하고 알림 메시지 전송
 @db.db_handler
 async def send_whale_alarm(cur):
@@ -57,6 +56,71 @@ async def send_whale_alarm(cur):
             if db.get_alarm_state(chat_id):
                 for msg in msg_list:
                     await bot.send_message(chat_id, msg)
+
+
+async def ask_exchange(chat_id: int, context=""):
+    chat = DB.get_chat(chat_id)
+
+    # 거래소 선택 키보드
+    markup = InlineKeyboardMarkup()
+    for exchange in DB.get_every_exchange():
+        markup.add(InlineKeyboardButton(text=exchange.get_name(), callback_data=f"{context}:{exchange.id}"))
+    
+    # 취소 버튼
+    markup.add(CancelButton())
+
+    await bot.send_message(chat.id, "거래소를 선택해주세요.", reply_markup=markup)
+
+
+async def ask_item(chat_id: int, exchange_id: int, context=""):
+    chat = DB.get_chat(chat_id)
+    exchange = DB.get_exchange(exchange_id)
+
+    # 종목 선택 키보드
+    markup = InlineKeyboardMarkup()
+    for item in exchange.get_items():
+        markup.add(InlineKeyboardButton(text=f"{item.get_code()}({item.get_name()})", callback_data=f"{context}:{item.id}"))
+
+    # 취소 버튼
+    markup.add(CancelButton())
+    
+    await bot.send_message(chat.id, "종목을 선택해주세요.", reply_markup=markup)
+
+
+async def ask_channel(chat_id: int, context=""):
+    chat = DB.get_chat(chat_id)
+
+    markup = InlineKeyboardMarkup()
+    for channel in chat.get_channels():
+        markup.add(InlineKeyboardButton(text=channel.get_name(), callback_data=f"{context}:{channel.id}"))
+
+    # 취소 버튼
+    markup.add(CancelButton())
+
+    await bot.send_message(chat.id, "채널을 선택해주세요.", reply_markup=markup)
+
+
+async def ask_alarm(chat_id: int, context=""):
+    chat = DB.get_chat(chat_id)
+
+    markup = InlineKeyboardMarkup()
+    for alarm in chat.get_alarms():
+        item = alarm.get_item()
+        markup.add(InlineKeyboardButton(text=f"{item.get_code()}/{alarm.get_order_quantity()}", callback_data=f"{context}:{alarm.id}"))
+
+    await bot.send_message(chat.id, "알림을 선택해주세요.", reply_markup=markup)
+
+
+async def ask_channel_alarm(chat_id: int, channel_id: int, context=""):
+    chat = DB.get_chat(chat_id)
+    channel = DB.get_channel(channel_id)
+
+    markup = InlineKeyboardMarkup()
+    for alarm in channel.get_alarms():
+        item = alarm.get_item()
+        markup.add(InlineKeyboardButton(text=f"{item.get_code()}/{alarm.get_order_quantity()}", callback_data=f"{context}:{alarm.id}"))
+
+    await bot.send_message(chat.id, "알림을 선택해주세요.", reply_markup=markup)
 
 
 # '/start': 채팅 등록
@@ -184,15 +248,7 @@ async def ask_alarm_exchange(message):
     chat = DB.get_chat(chat_id)
     chat.set_buffer("")
 
-    # 거래소 선택 키보드
-    markup = InlineKeyboardMarkup()
-    for exchange in DB.get_every_exchange():
-        markup.add(InlineKeyboardButton(text=exchange.get_name(), callback_data=f"addalarm1:{exchange.id}"))
-    
-    # 취소 버튼
-    markup.add(CancelButton())
-
-    await bot.send_message(chat.id, "거래소를 선택해주세요.", reply_markup=markup)
+    await ask_exchange(message.chat.id, 'addalarm1')
 
 
 # 알림을 받을 종목 선택
@@ -202,23 +258,12 @@ async def ask_alarm_item(call):
     chat = DB.get_chat(chat_id)
 
     exchange_id = int(call.data.replace("addalarm1:", ""))
+    exchange = DB.get_exchange(exchange_id)
     chat.add_buffer_parameter(ExchangeID=exchange_id)
 
-    # 선택한 거래소
-    exchange = DB.get_exchange(exchange_id)
-
-    # 거래소 선택 키보드 비활성화
     await disable_keyboard(prev_message=call.message, text=exchange.get_name())
 
-    # 종목 선택 키보드
-    markup = InlineKeyboardMarkup()
-    for item in exchange.get_items():
-        markup.add(InlineKeyboardButton(text=f"{item.get_code()}({item.get_name()})", callback_data=f"addalarm2:{item.id}"))
-
-    # 취소 버튼
-    markup.add(CancelButton())
-    
-    await bot.send_message(chat.id, "종목을 선택해주세요.", reply_markup=markup)
+    await ask_item(chat.id, exchange.id, "addalarm2")
 
 
 # 알림을 받을 주문량 설정
@@ -269,7 +314,7 @@ async def register_alarm(call):
     value = int(call.data.replace("addalarm4:", ""))
 
     # 주문량 입력 키보드 비활성화
-    await disable_keyboard(prev_message=call.message, text=convert_to_korean_num(value))
+    await disable_keyboard(prev_message=call.message, text=f"{convert_to_korean_num(value)} 원")
 
     # 알림 등록
     parameter = chat.parse_buffer()
@@ -283,20 +328,12 @@ async def register_alarm(call):
 # '/addchannelalarm' 입력 시 채널 알림 등록
 # 알림을 받을 거래소를 선택
 @bot.message_handler(commands=['addchannelalarm'])
-async def ask_channel(message):
+async def ask_channel_for_alarm(message):
     chat_id = message.chat.id
     chat = DB.get_chat(chat_id)
     chat.set_buffer("")
 
-    # 채널 선택 키보드
-    markup = InlineKeyboardMarkup()
-    for channel in chat.get_channels():
-        markup.add(InlineKeyboardButton(text=channel.get_name(), callback_data=f"addchannelalarm1:{channel.id}"))
-
-    # 취소 버튼
-    markup.add(CancelButton())
-
-    await bot.send_message(chat.id, "채널을 선택해주세요.", reply_markup=markup)
+    await ask_channel(chat.id, "addchannelalarm1")
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("addchannelalarm1:"))
@@ -312,15 +349,7 @@ async def ask_channel_alarm_exchange(call):
     # 채널 선택 키보드 비활성화
     await disable_keyboard(prev_message=call.message, text=DB.get_channel(channel_id).get_name())
 
-    # 거래소 선택 키보드
-    markup = InlineKeyboardMarkup()
-    for exchange in DB.get_every_exchange():
-        markup.add(InlineKeyboardButton(text=exchange.get_name(), callback_data=f"addchannelalarm2:{exchange.id}"))
-    
-    # 취소 버튼
-    markup.add(CancelButton())
-
-    await bot.send_message(chat.id, "거래소를 선택해주세요.", reply_markup=markup)
+    await ask_exchange(chat.id, "addchannelalarm2")
 
 
 # 알림을 받을 종목 선택
@@ -338,15 +367,7 @@ async def ask_channel_alarm_item(call):
     # 거래소 선택 키보드 비활성화
     await disable_keyboard(prev_message=call.message, text=exchange.get_name())
 
-    # 종목 선택 키보드
-    markup = InlineKeyboardMarkup()
-    for item in exchange.get_items():
-        markup.add(InlineKeyboardButton(text=f"{item.get_code()}({item.get_name()})", callback_data=f"addchannelalarm3:{item.id}"))
-
-    # 취소 버튼
-    markup.add(CancelButton())
-    
-    await bot.send_message(chat.id, "종목을 선택해주세요.", reply_markup=markup)
+    await ask_item(chat.id, exchange.id, "addchannelalarm3")
 
 
 # 알림을 받을 주문량 설정
@@ -413,8 +434,9 @@ async def register_channel_alarm(call):
     chat.set_status(0)
 
 
-@bot.message_handler(commands=['editalarm'])
-#############
+# @bot.message_handler(commands=['editalarm'])
+# async def ask_alarm_for_edit(message):
+
 
 
 # 대화 중단
