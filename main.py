@@ -195,6 +195,8 @@ async def ask_adding_alarm_type(message):
 async def ask_channel_to_add_alarm(call):
     chat_id = call.message.chat.id
 
+    await disable_keyboard(prev_message=call.message, text="채널 알림")
+
     question = ChannelQuestion(bot, database, chat_id, "ask_exchange_for_alarm")
     await question.ask()
 
