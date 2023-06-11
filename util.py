@@ -23,11 +23,9 @@ def CancelButton() -> InlineKeyboardButton:
 
 
 class OrderQuantityCalculator:
-    def __init__(self, context: str, value: int):
+    def __init__(self, next_trigger: str, value: int):
         self.value = value
-        self.context = context
-        self.context_type = context[:-1]
-        self.context_step = int(context[-1])
+        self.next_trigger = next_trigger
         self.markup = InlineKeyboardMarkup()
 
         for exp in range(4, 10, 3):
@@ -66,7 +64,7 @@ class OrderQuantityCalculator:
     def KeypadButton(self, increment: int) -> InlineKeyboardButton:
         text = f"{convert_to_korean_num(increment)}"
         
-        callback_data = f"{self.context}:{self.value + increment if self.value + increment > 0 else 0}"
+        callback_data = f"update_keyboard:{self.value + increment if self.value + increment > 0 else 0}:{self.next_trigger}"
         
         return InlineKeyboardButton(text=text, callback_data=callback_data)
 
@@ -76,4 +74,4 @@ class OrderQuantityCalculator:
 
 
     def SubmitButton(self) -> InlineKeyboardButton:
-        return InlineKeyboardButton(text="입력", callback_data=f"{self.context_type}{self.context_step + 1}:{self.value}")
+        return InlineKeyboardButton(text="입력", callback_data=f"{self.next_trigger}:{self.value}")

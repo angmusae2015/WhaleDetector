@@ -27,8 +27,8 @@ class Database:
     
     def execute(self, query: str) -> ResultSet:
         # 디버그용 코드
-        print("================")
-        print(f"Query: {query}")
+        # print("================")
+        # print(f"Query: {query}")
         
         self.cursor.execute(query)
         self.conn.commit()
@@ -38,7 +38,7 @@ class Database:
             result_set = self.cursor.fetchall()
 
             # 디버그용 코드
-            print(f"Result: {result_set}")
+            # print(f"Result: {result_set}")
         except TypeError:
             return ResultSet([], [])
         else:
@@ -149,6 +149,22 @@ class Database:
     def get_item(self, id: int) -> Item:
         return Item(self, id)
 
+    
+    def get_registered_items(self) -> list:
+        alarms = self.get_activated_alarms()
+        channel_alarms = self.get_activated_channel_alarms()
+
+        item_id_list = []
+        for alarm in alarms:
+            if alarm.get_item().id not in item_id_list:
+                item_id_list.append(alarm.get_item().id)
+        
+        for alarm in channel_alarms:
+            if alarm.get_item().id not in item_id_list:
+                item_id_list.append(alarm.get_item().id)
+
+        return [Item(self, id) for id in item_id_list]
+
 
     def get_exchange(self, id: int) -> Exchange:
         return Exchange(self, id)
@@ -176,10 +192,22 @@ class Database:
 
     def get_alarm(self, id: int) -> Alarm:
         return Alarm(self, id)
+
+    
+    def get_activated_alarms(self) -> list:
+        alarm_dict = self.select('Alarm', IsEnabled=True).to_dict()
+
+        return [Alarm(self, id) for id in alarm_dict.keys()]
     
 
     def get_channel_alarm(self, id: int) -> ChannelAlarm:
         return ChannelAlarm(self, id)
+
+    
+    def get_activated_channel_alarms(self) -> list:
+        alarm_dict = self.select('ChannelAlarm', IsEnabled=True).to_dict()
+
+        return [ChannelAlarm(self, id) for id in alarm_dict.keys()]
 
     
     def add_chat(self, id: int, alarm_option=True, status=0, buffer="") -> int:
@@ -212,23 +240,3 @@ class Database:
     
     def remove_channel_alarm(self, id: int):
         self.delete('ChannelAlarm', ChannelAlarmID=id)
-
-
-def db_handler(func):
-    def wrapper(*args, **kwargs):
-        conn = sqlite3.connect("database.db")
-        cur = conn.cursor()
-
-        f = func(cur, *args, **kwargs)
-        conn.commit()
-
-        return f
-
-    return wrapper
-
-
-# SQL 쿼리문 실행
-@db_handler
-def execute(cur, command):
-    cur.execute(command)
-    return cur.fetchall()

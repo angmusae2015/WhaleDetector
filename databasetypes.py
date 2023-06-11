@@ -80,6 +80,18 @@ class Item:
         
         return Exchange(self.db, exchange_id)
 
+    
+    def get_alarms(self) -> list:
+        alarm_dict = self.db.select('Alarm', ItemID=self.id).to_dict()
+        
+        return [Alarm(self.db, alarm_id) for alarm_id in alarm_dict.keys()]
+
+    
+    def get_channel_alarms(self) -> list:
+        alarm_dict = self.db.select('ChannelAlarm', ItemID=self.id).to_dict()
+        
+        return [ChannelAlarm(self.db, alarm_id) for alarm_id in alarm_dict.keys()]
+
 
 class Chat:
     def __init__(self, db, id: int):
@@ -108,7 +120,7 @@ class Chat:
         
     
     def get_alarms(self) -> list:
-        alarm_dict = self.db.select('Alarm', ChatID=self.id).result_set.to_dict()
+        alarm_dict = self.db.select('Alarm', ChatID=self.id).to_dict()
         alarm_list = [Alarm(self.db, alarm['AlarmID']) for alarm in alarm_dict.values()]
 
         return alarm_list
@@ -169,6 +181,9 @@ class Chat:
 
 
     def parse_buffer(self):
+        if self.get_buffer() == "":
+            return {}
+        
         parameter_list = self.get_buffer().split('?')
         parameter_dict = {}
         for parameter in parameter_list:
