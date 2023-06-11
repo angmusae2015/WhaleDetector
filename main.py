@@ -207,10 +207,13 @@ async def ask_exchange_for_alarm(call):
 
     if ':' in call.data:
         channel_id = int(call.data.split(':')[1])
+        channel = database.get_channel(channel_id)
         chat = database.get_chat(chat_id)
         chat.add_buffer_parameter(ChannelID=channel_id)
 
-    await disable_keyboard(prev_message=call.message, text="개인 채팅 알림")
+        await disable_keyboard(prev_message=call.message, text=channel.get_name())
+    else:
+        await disable_keyboard(prev_message=call.message, text="개인 채팅 알림")
 
     question = ExchangeQuestion(bot, database, chat_id, "ask_item_for_alarm")
     await question.ask()
