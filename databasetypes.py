@@ -308,7 +308,7 @@ class ChannelAlarm:
     def get_channel(self) -> Channel:
         channel_id = self.db.get_by_primary_key(self.table_name, self.id)['ChannelID']
 
-        return Chat(self.db, chat_id)
+        return Channel(self.db, channel_id)
 
     
     def get_item(self) -> Item:
