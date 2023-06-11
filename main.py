@@ -166,7 +166,7 @@ async def ask_channel_id(message):
         else:
             channel_name = chat.parse_buffer()['ChannelName']
             chat.add_channel(channel_id, channel_name)
-            await bot.send_message(chat.id, "채널을 등록했어요! '/addchannelalarm'을 입력해 채널 알림을 설정하세요.")
+            await bot.send_message(chat.id, "채널을 등록했어요! '/addalarm'을 입력해 알림을 설정하세요.")
             
             chat.set_buffer("")
 
