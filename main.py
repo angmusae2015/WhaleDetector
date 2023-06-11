@@ -56,7 +56,6 @@ async def disable_keyboard(prev_message, text):
     await bot.edit_message_reply_markup(chat_id=prev_message.chat.id, message_id=int(message_id), reply_markup=disabled_keyboard_markup)
 
 
-
 # '/start': 채팅 등록
 @bot.message_handler(commands=['start'])
 async def start(message):
@@ -280,7 +279,8 @@ async def register_alarm(call):
     chat.set_status(0)
 
 
-# 알림 설정 편집
+# 알림 편집
+# 편집할 알림 유형 질문
 @bot.message_handler(commands=['editalarm'])
 async def ask_editing_alarm_type(message):
     chat_id = message.chat.id
@@ -362,15 +362,8 @@ async def ask_alarm_edit_menu(call):
 
     menu_list = [("끄기", "turn_alarm_off") if alarm.is_enabled() else ("켜기", "turn_alarm_on"), ("기준 물량 편집", "edit_order_quantity"), ("삭제", "delete_alarm")]
 
-    # 메뉴 선택 키보드
-    markup = InlineKeyboardMarkup()
-    for menu in menu_list:
-        markup.add(InlineKeyboardButton(text=f"{menu[0]}", callback_data=f"{menu[1]}_alarm"))
-
-    # 취소 버튼
-    markup.add(CancelButton())
-    
-    await bot.send_message(chat.id, "메뉴를 선택해주세요.", reply_markup=markup)
+    question = Question(bot, database, chat_id, "메뉴를 선택해주세요.", menu_list)
+    await question.ask()
 
 
 # 선택한 알림 끄기
@@ -492,6 +485,125 @@ async def delete_alarm(call):
 
     chat.set_buffer("")
     await bot.send_message(chat.id, f"알림을 삭제했어요.")
+
+
+@bot.message_handler(commands=['editchannel'])
+async def ask_channel_to_edit(message):
+    chat_id = message.chat.id
+    chat = database.get_chat(chat_id)
+    chat.set_buffer("")
+
+    question = ChannelQuestion(bot, database, chat.id, "ask_channel_edit_menu")
+    await question.ask()
+
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("ask_channel_edit_menu"))
+async def ask_channel_edit_menu(call):
+    chat_id = call.message.chat.id
+    chat = database.get_chat(chat_id)
+
+    channel_id = int(call.data.split(':')[1])
+    channel = database.get_channel(channel_id)
+    chat.add_buffer_parameter(ChannelID=channel_id)
+
+    # 메뉴 선택 키보드 비활성화
+    await disable_keyboard(prev_message=call.message, text=channel.get_name())
+
+    menu_list = [
+        ("채널 확인하기", "check_channel"),
+        ("알림 끄기", "turn_channel_alarm_off") if channel.get_alarm_option() else ("알림 켜기", "turn_channel_alarm_on"),
+        ("이름 변경", "ask_channel_name"),
+        ("삭제", "delete_channel")
+    ]
+
+    question = Question(bot, database, chat.id, "메뉴를 선택해주세요.", menu_list)
+    await question.ask()
+
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("check_channel"))
+async def check_channel(call):
+    chat_id = call.message.chat.id
+    chat = database.get_chat(chat_id)
+
+    channel_id = chat.parse_buffer()["ChannelID"]
+    
+    await bot.send_message(channel_id, "현재 선택한 채널입니다.")
+
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("turn_channel_alarm_off"))
+async def turn_channel_alarm_off(call):
+    chat_id = call.message.chat.id
+    chat = database.get_chat(chat_id)
+
+    channel_id = chat.parse_buffer()["ChannelID"]
+    channel = database.get_channel(channel_id)
+
+    # 메뉴 선택 키보드 비활성화
+    await disable_keyboard(prev_message=call.message, text="알림 끄기")
+
+    channel.set_alarm_option(False)
+    await bot.send_message(chat.id, "해당 채널의 알림을 중단했어요.")
+
+    chat.set_buffer("")
+
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("turn_channel_alarm_on"))
+async def turn_channel_alarm_on(call):
+    chat_id = call.message.chat.id
+    chat = database.get_chat(chat_id)
+
+    channel_id = chat.parse_buffer()["ChannelID"]
+    channel = database.get_channel(channel_id)
+
+    # 메뉴 선택 키보드 비활성화
+    await disable_keyboard(prev_message=call.message, text="알림 켜기")
+
+    channel.set_alarm_option(False)
+    await bot.send_message(chat.id, "해당 채널의 알림을 다시 시작했어요.")
+
+    chat.set_buffer("")
+
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("ask_channel_name"))
+async def ask_channel_name(call):
+    chat_id = call.message.chat.id
+    chat = database.get_chat(chat_id)
+
+    # 메뉴 선택 키보드 비활성화
+    await disable_keyboard(prev_message=call.message, text="이름 변경")
+
+    await bot.send_message(chat.id, "변경할 이름을 입력해주세요.")
+    chat.set_status(3)
+
+
+@bot.message_handler(func=lambda message: database.get_chat(message.chat.id).get_status() == 3)
+async def change_channel_name(message):
+    chat_id = message.chat.id
+    chat = database.get_chat(chat_id)
+
+    channel_id = chat.parse_buffer()["ChannelID"]
+    channel = database.get_channel(channel_id)
+    
+    channel.set_name(message.text)
+
+    await bot.send_message(chat.id, f"채널 이름을 {message.text}(으)로 변경했어요.")
+    chat.set_status(0)
+    chat.set_buffer("")
+
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("delete_channel"))
+async def delete_channel(call):
+    chat_id = call.message.chat.id
+    chat = database.get_chat(chat_id)
+
+    channel_id = chat.parse_buffer()["ChannelID"]
+    database.remove_channel(channel_id)
+
+    # 메뉴 선택 키보드 비활성화
+    await disable_keyboard(prev_message=call.message, text="삭제")
+
+    await bot.send_message(chat.id, "해당 채널을 삭제했어요.")
+    chat.set_buffer("")
 
 
 # 사용자가 누른 버튼에 따라 키보드 값 변경

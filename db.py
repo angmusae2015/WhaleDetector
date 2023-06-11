@@ -24,6 +24,8 @@ class Database:
         self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self.cursor = self.conn.cursor()
 
+        self.cursor.execute("PRAGMA foreign_keys = ON;")
+
     
     def execute(self, query: str) -> ResultSet:
         # 디버그용 코드

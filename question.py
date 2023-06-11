@@ -11,6 +11,15 @@ class Question:
     text = ""
     button_options = []
 
+    
+    def __init__(self, bot: AsyncTeleBot, database: db.Database, chat_id: int, text: str, button_options: list):
+        self.bot = bot
+        self.database = database
+        self.chat = self.database.get_chat(chat_id)
+        self.text = text
+        self.button_options = button_options
+
+
     async def ask(self):
         markup = InlineKeyboardMarkup()
         
