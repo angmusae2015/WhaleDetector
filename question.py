@@ -119,7 +119,7 @@ class ChannelAlarmQuestion(Question):
         alarms = channel.get_alarms()
         self.button_options = [
             (
-                f"{alarm.get_item().get_code()}/{convert_to_korean_num(alarm.get_order_quantity())} 원",
+                f"{alarm.get_item().get_code()}/{convert_to_korean_num(alarm.get_order_quantity())} 원 ({'켜짐' if alarm.is_enabled() else '꺼짐'})",
                 f"{next_trigger}:{alarm.id}"
             ) for alarm in alarms
         ]
