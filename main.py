@@ -4,7 +4,7 @@ import aioschedule
 from telebot.async_telebot import AsyncTeleBot
 from telebot.types import InlineKeyboardButton, InlineKeyboardMarkup
 from telebot.apihelper import ApiTelegramException
-from orderbook import Orderbook
+from upbit import Upbit
 from util import *
 from question import *
 import db
@@ -19,6 +19,7 @@ def get_token(file_path):
 token = get_token("token.txt")
 bot = AsyncTeleBot(token)
 database = db.Database("database.db")
+upbit = Upbit()
 
 
 # 고래를 감시하고 알림 메시지 전송
@@ -27,22 +28,22 @@ async def send_whale_alarm():
     item_list = database.get_registered_items()
 
     for item in item_list:
-        orderbook = Orderbook(item)
-
         alarm_list = item.get_alarms()
         channel_alarm_list = item.get_channel_alarms()
         
         for alarm in alarm_list:
             if alarm.is_enabled() and alarm.get_chat().get_alarm_option():
                 chat = alarm.get_chat()
-                for msg in orderbook.whale_alarm(alarm.get_order_quantity()):
-                    await bot.send_message(chat.id, msg)
+                whale_list = upbit.find_whale(item.get_code(), alarm.get_order_quantity())
+                for whale in whale_list:
+                    await bot.send_message(chat.id, whale.write_whale_msg())
 
         for alarm in channel_alarm_list:
             if alarm.is_enabled() and alarm.get_channel().get_alarm_option():
                 channel = alarm.get_channel()
-                for msg in orderbook.whale_alarm(alarm.get_order_quantity()):
-                    await bot.send_message(channel.id, msg)
+                whale_list = upbit.find_whale(item.get_code(), alarm.get_order_quantity())
+                for whale in whale_list:
+                    await bot.send_message(chat.id, whale.write_whale_msg())
 
 
 # 키보드 비활성화

@@ -152,6 +152,12 @@ class Database:
         return Item(self, id)
 
     
+    def get_item_by_code(self, exchange_id: int, code: str) -> Item:
+        result_set = self.select('Item', ItemCode=code, ExchangeID=exchange_id).result_set
+
+        return Item(self, result_set[0][0])
+
+    
     def get_registered_items(self) -> list:
         alarms = self.get_activated_alarms()
         channel_alarms = self.get_activated_channel_alarms()
@@ -212,6 +218,14 @@ class Database:
         return [ChannelAlarm(self, id) for id in alarm_dict.keys()]
 
     
+    def get_whales(self, item_id=None) -> list:
+        if item_id == None:
+            whale_dict = self.select('Whale').to_dict()
+        else:
+            whale_dict = self.select('Whale', ItemID=item_id).to_dict()
+        
+
+    
     def add_chat(self, id: int, alarm_option=True, status=0, buffer="") -> int:
         return self.insert('Chat', ChatID=id, AlarmOption=alarm_option, ChatStatus=status, ChatBuffer=buffer)
 
@@ -226,6 +240,10 @@ class Database:
 
     def add_channel_alarm(self, channel_id: int, item_id: int, order_quantity: int, enabled=True) -> int:
         return self.insert('ChannelAlarm', ChannelID=channel_id, ItemID=item_id, OrderQuantity=order_quantity, IsEnabled=enabled)
+
+    
+    def add_whale(self, item_id: int, order_type: str, price: int, volume: int) -> int:
+        return self.insert('Whale', ItemID=item_id, OrderType=order_type, Price=price, Volume=volume)
 
     
     def remove_chat(self, id: int):

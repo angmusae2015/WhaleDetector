@@ -8,7 +8,7 @@ cur = conn.cursor()
 cur.execute("""CREATE TABLE Exchange (
     ExchangeID INTEGER PRIMARY KEY AUTOINCREMENT,
     ExchangeName TEXT NOT NULL
-    );""")
+);""")
 cur.execute("""INSERT INTO Exchange (ExchangeName) VALUES ("업비트");""")
 cur.execute("""INSERT INTO Exchange (ExchangeName) VALUES ("바이낸스");""")
 
@@ -20,7 +20,7 @@ cur.execute("""CREATE TABLE Item (
     ExchangeID INTEGER NOT NULL,
 
     FOREIGN KEY (ExchangeID) REFERENCES Exchange(ExchangeID) ON DELETE CASCADE
-    );""")
+);""")
 cur.execute("""INSERT INTO Item (ItemCode, ItemName, ExchangeID) VALUES ("KRW-BTC", "비트코인", 1);""")
 
 # 채팅 설정 테이블
@@ -29,7 +29,7 @@ cur.execute("""CREATE TABLE Chat (
     AlarmOption BOOLEAN NOT NULL DEFAULT 1,
     ChatStatus INTEGER DEFAULT 0,
     ChatBuffer TEXT DEFAULT ''
-    );""")
+);""")
     
 # 알림 설정 규칙 테이블
 cur.execute("""CREATE TABLE Alarm (
@@ -41,7 +41,7 @@ cur.execute("""CREATE TABLE Alarm (
 
     FOREIGN KEY (ChatID) REFERENCES Chat(ChatID) ON DELETE CASCADE,
     FOREIGN KEY (ItemID) REFERENCES Item(ItemID) ON DELETE CASCADE
-    );""")
+);""")
 
 # 채널 정보 테이블
 cur.execute("""CREATE TABLE Channel (
@@ -63,7 +63,28 @@ cur.execute("""CREATE TABLE ChannelAlarm (
 
     FOREIGN KEY (ChannelID) REFERENCES Channel(ChannelID) ON DELETE CASCADE,
     FOREIGN KEY (ItemID) REFERENCES Item(ItemID) ON DELETE CASCADE
-    );""")
+);""")
+
+
+# 업비트 체결 기록 테이블
+# cur.execute("""CREATE TABLE UpbitTick (
+#     TickID INTEGER PRIMARY KEY,
+#     ItemID INTEGER NOT NULL,
+#
+#     FOREIGN KEY (ItemID) REFERENCES Item(ItemID) ON DELETE CASCADE
+# )""")
+
+
+# 고래 기록 테이블
+# cur.execute("""CREATE TABLE Whale (
+#     ItemID INTEGER NOT NULL,
+#     OrderType TEXT NOT NULL,
+#     Price INTEGER NOT NULL,
+#     Volume REAL, NOT NULL,
+
+#     FOREIGN KEY (ItemID) REFERENCES Item(ItemID) ON DELETE CASCADE,
+#     CONSTRAINT UpbitWhaleKey PRIMARY KEY(ItemID, OrderType, Price)
+# );""")
 
 conn.commit()
 
