@@ -177,7 +177,7 @@ class Database:
             return Chat(self, id)
 
         else:
-            chat_dict = self.select('Chat').to_dict()
+            chat_dict = self.select('Chat', **kwargs).to_dict()
             return [Chat(self, id) for id in chat_dict.keys()]
     
 
