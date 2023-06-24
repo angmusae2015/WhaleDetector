@@ -1,4 +1,5 @@
 from databasetypes import *
+from typing import Union, List
 import time
 import sqlite3
 
@@ -63,6 +64,8 @@ class Database:
                 condition.append(f" {key}={value}")
             elif type(value) == str:
                 condition.append(f" {key}='{value}'")
+            elif type(value) == bool:
+                condition.append(f" {key}={int(value)}")
         
         if len(condition) > 0:
             query += " WHERE" + ' AND'.join(condition)
@@ -143,107 +146,69 @@ class Database:
     def is_alarm_exists(self, id: int) -> bool:
         return self.is_exists('Alarm', id)
 
-    
-    def is_channel_alarm_exists(self, id: int) -> bool:
-        return self.is_exists('ChannelAlarm', id)
-
-
-    def get_item(self, id: int) -> Item:
-        return Item(self, id)
-
-    
-    def get_item_by_code(self, exchange_id: int, code: str) -> Item:
-        result_set = self.select('Item', ItemCode=code, ExchangeID=exchange_id).result_set
-
-        return Item(self, result_set[0][0])
-
-    
-    def get_registered_items(self) -> list:
-        alarms = self.get_activated_alarms()
-        channel_alarms = self.get_activated_channel_alarms()
-
-        item_id_list = []
-        for alarm in alarms:
-            if alarm.get_item().id not in item_id_list:
-                item_id_list.append(alarm.get_item().id)
+    def is_channel(self, chat_id: int) -> bool:
+        if self.is_chat_exists(chat_id):
+            return False
         
-        for alarm in channel_alarms:
-            if alarm.get_item().id not in item_id_list:
-                item_id_list.append(alarm.get_item().id)
-
-        return [Item(self, id) for id in item_id_list]
+        elif self.is_channel_exists(chat_id):
+            return True
 
 
-    def get_exchange(self, id: int) -> Exchange:
-        return Exchange(self, id)
+    def get_item(self, id=None, **kwargs) -> Union[Item, List[Item]]:
+        if id != None:
+            return Item(self, id)
 
-    
-    def get_every_exchange(self) -> list:
-        exchange_dict = self.select('Exchange').to_dict()
-        
-        return [Exchange(self, id) for id in exchange_dict.keys()]
-
-    
-    def get_chat(self, id: int) -> Chat:
-        return Chat(self, id)
-
-    
-    def get_every_chat(self) -> list:
-        chat_dict = self.select('Chat').to_dict()
-
-        return [Chat(self, id) for id in chat_dict.keys()]
-    
-
-    def get_channel(self, id: int) -> Channel:
-        return Channel(self, id)
-    
-
-    def get_alarm(self, id: int) -> Alarm:
-        return Alarm(self, id)
-
-    
-    def get_activated_alarms(self) -> list:
-        alarm_dict = self.select('Alarm', IsEnabled=True).to_dict()
-
-        return [Alarm(self, id) for id in alarm_dict.keys()]
-    
-
-    def get_channel_alarm(self, id: int) -> ChannelAlarm:
-        return ChannelAlarm(self, id)
-
-    
-    def get_activated_channel_alarms(self) -> list:
-        alarm_dict = self.select('ChannelAlarm', IsEnabled=True).to_dict()
-
-        return [ChannelAlarm(self, id) for id in alarm_dict.keys()]
-
-    
-    def get_whales(self, item_id=None) -> list:
-        if item_id == None:
-            whale_dict = self.select('Whale').to_dict()
         else:
-            whale_dict = self.select('Whale', ItemID=item_id).to_dict()
-        
+            item_dict = self.select('Item', **kwargs).to_dict()
+            return [Item(self, item_id) for item_id in item_dict.keys()]
+
+
+    def get_exchange(self, id=None, **kwargs) -> Union[Exchange, List[Exchange]]:
+        if id != None:
+            return Exchange(self, id)
+
+        else:
+            exchange_dict = self.select('Exchange', **kwargs).to_dict()
+            return [Exchange(self, exchange_id) for exchange_id in exchange_dict.keys()]
+
+    
+    def get_chat(self, id=None, **kwargs) -> Union[Chat, List[Chat]]:
+        if id != None:
+            return Chat(self, id)
+
+        else:
+            chat_dict = self.select('Chat').to_dict()
+            return [Chat(self, id) for id in chat_dict.keys()]
+    
+
+    def get_channel(self, id=None, **kwargs) -> Union[Channel, List[Channel]]:
+        if id != None:
+            return Channel(self, id)
+
+        else:
+            channel_dict = self.select('Channel').to_dict()
+            return [Channel(self, channel_id) for channel_id in channel_dict.keys()]
+    
+
+    def get_alarm(self, id=None, **kwargs) -> Union[Alarm, List[Alarm]]:
+        if id != None:
+            return Alarm(self, id)
+        else:
+            alarm_dict = self.select('Alarm', **kwargs).to_dict()
+            
+            return [Alarm(self, alarm_id) for alarm_id in alarm_dict.keys()]
 
     
     def add_chat(self, id: int, alarm_option=True, status=0, buffer="") -> int:
         return self.insert('Chat', ChatID=id, AlarmOption=alarm_option, ChatStatus=status, ChatBuffer=buffer)
 
     
-    def add_channel(self, id: int, name: str, chat_id: int, alarm_option=True) -> int:
-        return self.insert('Channel', ChannelID=id, ChannelName=name, ChatID=chat_id, AlarmOption=alarm_option)
+    def add_channel(self, id: int, name: str, admin_chat_id: int, alarm_option=True) -> int:
+        return self.insert('Channel', ChannelID=id, ChannelName=name, AdminChatID=admin_chat_id, AlarmOption=alarm_option)
 
 
-    def add_alarm(self, chat_id: int, item_id: int, order_quantity: int, enabled=True) -> int:
-        return self.insert('Alarm', ChatID=chat_id, ItemID=item_id, OrderQuantity=order_quantity, IsEnabled=enabled)
-
-
-    def add_channel_alarm(self, channel_id: int, item_id: int, order_quantity: int, enabled=True) -> int:
-        return self.insert('ChannelAlarm', ChannelID=channel_id, ItemID=item_id, OrderQuantity=order_quantity, IsEnabled=enabled)
-
-    
-    def add_whale(self, item_id: int, order_type: str, price: int, volume: int) -> int:
-        return self.insert('Whale', ItemID=item_id, OrderType=order_type, Price=price, Volume=volume)
+    def add_alarm(self, alarm_type: str, chat_id: int, item_id: int, quantity: int, is_enabled=True) -> int:
+        return self.insert('Alarm', AlarmType=alarm_type, ChatID=chat_id, ItemID=item_id, Quantity=quantity, IsEnabled=is_enabled)
 
     
     def remove_chat(self, id: int):
@@ -256,7 +221,3 @@ class Database:
     
     def remove_alarm(self, id: int):
         self.delete('Alarm', AlarmID=id)
-
-    
-    def remove_channel_alarm(self, id: int):
-        self.delete('ChannelAlarm', ChannelAlarmID=id)

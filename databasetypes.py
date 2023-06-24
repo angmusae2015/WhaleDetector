@@ -1,3 +1,6 @@
+from typing import Union, List
+
+
 class ExchangeNotFoundError(Exception):
     def __init__(self):
         super().__init__('Could not find Exchange with given ID in database.')
@@ -23,11 +26,6 @@ class AlarmNotFoundError(Exception):
         super().__init__('Could not find Alarm with given ID in database.')
 
 
-class ChannelAlarmNotFoundError(Exception):
-    def __init__(self):
-        super().__init__('Could not find ChannelAlarm with given ID in database.')
-
-
 class Exchange:
     def __init__(self, db, id: int):
         self.db = db
@@ -46,11 +44,8 @@ class Exchange:
         return self.db.get_by_primary_key(self.table_name, self.id)['ExchangeName']
 
     
-    def get_items(self) -> list:
-        item_dict = self.db.select('Item', ExchangeID=self.id).to_dict()
-        item_list = [Item(self.db, item['ItemID']) for item in item_dict.values()]
-
-        return item_list
+    def get_items(self, **kwargs) -> list:
+        return self.db.get_item(ExchangeID=self.id, **kwargs)
 
 
 class Item:
@@ -81,16 +76,16 @@ class Item:
         return Exchange(self.db, exchange_id)
 
     
-    def get_alarms(self) -> list:
-        alarm_dict = self.db.select('Alarm', ItemID=self.id).to_dict()
-        
-        return [Alarm(self.db, alarm_id) for alarm_id in alarm_dict.keys()]
+    def get_unit(self) -> str:
+        return self.db.get_by_primary_key(self.table_name, self.id)['ItemUnit']
 
     
-    def get_channel_alarms(self) -> list:
-        alarm_dict = self.db.select('ChannelAlarm', ItemID=self.id).to_dict()
-        
-        return [ChannelAlarm(self.db, alarm_id) for alarm_id in alarm_dict.keys()]
+    def get_currency_unit(self) -> str:
+        return self.db.get_by_primary_key(self.table_name, self.id)['CurrencyUnit']
+
+    
+    def get_alarms(self, **kwargs) -> list:
+        return self.db.get_alarm(ItemID=self.id, **kwargs)
 
 
 class Chat:
@@ -119,18 +114,12 @@ class Chat:
         return self.db.get_by_primary_key(self.table_name, self.id)['ChatBuffer']
         
     
-    def get_alarms(self) -> list:
-        alarm_dict = self.db.select('Alarm', ChatID=self.id).to_dict()
-        alarm_list = [Alarm(self.db, alarm['AlarmID']) for alarm in alarm_dict.values()]
-
-        return alarm_list
+    def get_alarms(self, **kwargs) -> list:
+        return self.db.get_alarm(ChatID=self.id, **kwargs)
 
     
-    def get_channels(self) -> list:
-        channel_dict = self.db.select('Channel', ChatID=self.id).to_dict()
-        channel_list = [Channel(self.db, channel['ChannelID']) for channel in channel_dict.values()]
-
-        return channel_list
+    def get_channels(self, **kwargs) -> list:
+        return self.db.get_channel(AdminChatID=self.id, **kwargs)
 
     
     def set_alarm_option(self, option: bool):
@@ -145,8 +134,8 @@ class Chat:
         self.db.update(self.table_name, self.id, ChatBuffer=buffer)
 
     
-    def add_alarm(self, item_id: int, order_quantity: int, enabled=True):
-        alarm_id = self.db.add_alarm(self.id, item_id, order_quantity, enabled)
+    def add_alarm(self, alarm_type: str, item_id: int, quantity: int, enabled=True):
+        alarm_id = self.db.add_alarm(alarm_type, False, self.id, item_id, quantity, enabled)
 
         return Alarm(self.db, alarm_id)
 
@@ -214,8 +203,8 @@ class Channel:
         return self.db.get_by_primary_key(self.table_name, self.id)['ChannelName']
 
     
-    def get_chat(self) -> Chat:
-        chat_id = self.db.get_by_primary_key(self.table_name, self.id)['ChatID']
+    def get_admin_chat(self) -> Chat:
+        chat_id = self.db.get_by_primary_key(self.table_name, self.id)['AdminChatID']
 
         return Chat(self.db, chat_id)
 
@@ -224,11 +213,8 @@ class Channel:
         return self.db.get_by_primary_key(self.table_name, self.id)['AlarmOption']
 
     
-    def get_alarms(self) -> list:
-        alarm_dict = self.db.select('ChannelAlarm', ChannelID=self.id).to_dict()
-        alarm_list = [ChannelAlarm(self.db, alarm['ChannelAlarmID']) for alarm in alarm_dict.values()]
-
-        return alarm_list
+    def get_alarms(self, **kwargs) -> list:
+        return self.db.get_alarm(ChatID=self.id, **kwargs)
 
     
     def set_name(self, name: str):
@@ -239,14 +225,14 @@ class Channel:
         self.db.update(self.table_name, self.id, AlarmOption=option)
 
     
-    def add_alarm(self, item_id: int, order_quantity: int, enabled=True):
-        channel_alarm_id = self.db.add_channel_alarm(self.id, item_id, order_quantity, enabled)
+    def add_alarm(self, alarm_type: str, item_id: int, quantity: int, is_enabled=True):
+        alarm_id = self.db.add_alarm(alarm_type, True, self.id, item_id, quantity, is_enabled)
 
-        return ChannelAlarm(self.db, channel_alarm_id)
+        return Alarm(self.db, alarm_id)
 
 
-    def remove_alarm(self, id):
-        self.db.remove_channel_alarm(id)
+    def remove_alarm(self, id: int):
+        self.db.remove_alarm(int)
 
 
 class Alarm:
@@ -262,11 +248,19 @@ class Alarm:
     def is_exists(self) -> bool:
         return self.db.is_exists(self.table_name, self.id)
 
+
+    def get_type(self) -> str:
+        return self.db.get_by_primary_key(self.table_name, self.id)['AlarmType']
+
     
-    def get_chat(self) -> Chat:
+    def get_chat(self) -> Union[Chat, Channel]:
         chat_id = self.db.get_by_primary_key(self.table_name, self.id)['ChatID']
 
-        return Chat(self.db, chat_id)
+        if self.db.is_channel(chat_id):
+            return Channel(self.db, chat_id)
+        
+        else:
+            return Chat(self.db, chat_id)
 
     
     def get_item(self) -> Item:
@@ -275,58 +269,16 @@ class Alarm:
         return Item(self.db, item_id)
 
 
-    def get_order_quantity(self) -> int:
-        return self.db.get_by_primary_key(self.table_name, self.id)['OrderQuantity']
+    def get_quantity(self) -> int:
+        return self.db.get_by_primary_key(self.table_name, self.id)['Quantity']
 
     
     def is_enabled(self) -> bool:
         return self.db.get_by_primary_key(self.table_name, self.id)['IsEnabled']
 
     
-    def set_order_quantity(self, order_quantity: int):
-        self.db.update(self.table_name, self.id, OrderQuantity=order_quantity)
-
-    
-    def set_enabled(self, enabled: bool):
-        self.db.update(self.table_name, self.id, IsEnabled=enabled)
-
-
-class ChannelAlarm:
-    def __init__(self, db, id: int):
-        self.db = db
-        self.id = id
-        self.table_name = 'ChannelAlarm'
-
-        if not self.is_exists():
-            raise ChannelAlarmNotFoundError
-
-
-    def is_exists(self) -> bool:
-        return self.db.is_exists(self.table_name, self.id)
-
-    
-    def get_channel(self) -> Channel:
-        channel_id = self.db.get_by_primary_key(self.table_name, self.id)['ChannelID']
-
-        return Channel(self.db, channel_id)
-
-    
-    def get_item(self) -> Item:
-        item_id = self.db.get_by_primary_key(self.table_name, self.id)['ItemID']
-        
-        return Item(self.db, item_id)
-
-
-    def get_order_quantity(self) -> int:
-        return self.db.get_by_primary_key(self.table_name, self.id)['OrderQuantity']
-
-    
-    def is_enabled(self) -> bool:
-        return self.db.get_by_primary_key(self.table_name, self.id)['IsEnabled']
-    
-
-    def set_order_quantity(self, order_quantity: int):
-        self.db.update(self.table_name, self.id, OrderQuantity=order_quantity)
+    def set_quantity(self, quantity: int):
+        self.db.update(self.table_name, self.id, Quantity=quantity)
 
     
     def set_enabled(self, enabled: bool):
