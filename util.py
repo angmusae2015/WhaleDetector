@@ -1,6 +1,4 @@
 from telebot.types import InlineKeyboardButton, InlineKeyboardMarkup
-from decimal import Decimal
-import math
 
 
 # 문자열로 된 숫자를 입력받아 한국식 표기로 변환함
