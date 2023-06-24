@@ -186,7 +186,7 @@ class Database:
             return Channel(self, id)
 
         else:
-            channel_dict = self.select('Channel').to_dict()
+            channel_dict = self.select('Channel', **kwargs).to_dict()
             return [Channel(self, channel_id) for channel_id in channel_dict.keys()]
     
 
