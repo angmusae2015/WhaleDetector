@@ -103,7 +103,7 @@ class Database:
 
         # 조건 지정
         if kwargs != None:
-            query += " WHERE" + self.parameter_statement(**kwargs)
+            query += " WHERE " + self.parameter_statement(**kwargs)
 
         self.execute(query)    
 
