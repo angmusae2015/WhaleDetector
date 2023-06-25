@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Union, List
 import requests
+import json
 import db
 
 
@@ -18,7 +19,7 @@ class Tick:
 
     
     def write_tick_msg(self):
-        msg = f"업비트 {self.item.get_code()} 체결 물량 발견!\n\n일시: {self.trade_time}\n체결량: {self.volume:,.2f} {self.item.get_unit()}"
+        msg = f"업비트 {self.item.get_code()}({self.item.get_name()}) 체결 발생!\n\n일시: {self.trade_time}\n체결량: {self.volume:,.2f} {self.item.get_unit()}@{self.price:,} {self.item.get_currency_unit()}\n총 거래량: {self.volume * self.price:,.2f} {self.item.get_currency_unit()}"
 
         return msg
 
@@ -34,12 +35,20 @@ class OrderbookUnit:
 
 
     def write_whale_msg(self):
-        msg = f"업비트 {self.item.get_code()} 고래 발견!\n\n일시: {self.strftime}\n{'매수' if self.order_type else '매도'}벽 {self.volume:.2f}@{self.price:,}\nKRW {self.volume * self.price:,.2f}"
+        msg = f"업비트 {self.item.get_code()}({self.item.get_name()}) 고래 발견!\n\n일시: {self.strftime}\n{'매수' if self.order_type else '매도'}벽 {self.volume:.2f} {self.item.get_unit()}@{self.price:,} {self.item.get_currency_unit()}\n{self.volume * self.price:,.2f} {self.item.get_currency_unit()}"
 
         return msg
 
 
 class Upbit:
+    def get_every_items(self, currency_unit="KRW"):
+        url = "https://api.upbit.com/v1/market/all"
+        headers = {"accept": "application/json"}
+
+        response = requests.get(url, headers=headers)
+        return [item for item in response.json() if item["market"].split('-')[0] == currency_unit]  # 지정한 단위 종목만 불러옴
+
+
     def get_ticks(self, item_code: str, interval: int, count=10) -> List[Tick]:
         url = f"https://api.upbit.com/v1/trades/ticks?market={item_code}&count={count}"
         headers = {"accept": "application/json"}

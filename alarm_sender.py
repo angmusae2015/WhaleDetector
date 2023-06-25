@@ -49,7 +49,7 @@ async def send_tick_alarm():
         item = database.get_item(item_id)
         alarm_list = item.get_alarms(IsEnabled=True, AlarmType="TickAlarm")
 
-        ticks = upbit.get_ticks(item.get_code(), 10, count=30)  # 10초 전까지의 체결 기록을 최대 30개까지 조회
+        ticks = upbit.get_ticks(item.get_code(), interval=tick_alarm_interval, count=30)  # 10초 전까지의 체결 기록을 최대 30개까지 조회
         for tick in ticks:
             for alarm in alarm_list:
                 chat = alarm.get_chat()

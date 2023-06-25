@@ -28,6 +28,22 @@ class Database:
         self.cursor.execute("PRAGMA foreign_keys = ON;")
 
     
+    # 주어진 매개변수를 SQL 조건문으로 변환
+    @staticmethod
+    def parameter_statement(seperator=" AND ", **kwargs):
+        parameter_list = []
+        for key, value in kwargs.items():
+            if type(value) == str:
+                value = f"'{value}'"
+
+            elif type(value) == bool:
+                value = int(value)
+
+            parameter_list.append(f"{key}={value}")
+            
+        return seperator.join(parameter_list)
+
+    
     def execute(self, query: str) -> ResultSet:
         # 디버그용 코드
         # print("================")
@@ -58,33 +74,17 @@ class Database:
         query = f"SELECT * FROM {table_name}"
     
         # 조건 지정
-        condition = []
-        for key, value in kwargs.items():
-            if type(value) == int or type(value) == float:
-                condition.append(f" {key}={value}")
-            elif type(value) == str:
-                condition.append(f" {key}='{value}'")
-            elif type(value) == bool:
-                condition.append(f" {key}={int(value)}")
-        
-        if len(condition) > 0:
-            query += " WHERE" + ' AND'.join(condition)
+        if kwargs != {}:
+            query += " WHERE " + self.parameter_statement(**kwargs)
 
         return self.execute(query)
     
 
     def insert(self, table_name: str, **kwargs) -> int:
-        column_list_state = f" ({', '.join(kwargs.keys())})"
+        column_list_state = f"({', '.join(kwargs.keys())})"
 
-        value_list = []
-        for value in kwargs.values():
-            if type(value) == str:
-                value_list.append(f"'{value}'")
-            else:
-                value_list.append(f"{value}")
-
-        query = f"INSERT INTO {table_name}{column_list_state} VALUES ({', '.join(value_list)});"
-
+        parameter_list = [str(f"'{value}'" if type(value)==str else (int(value) if type(value)==bool else value)) for value in kwargs.values()]
+        query = f"INSERT INTO {table_name} {column_list_state} VALUES ({', '.join(parameter_list)});"
         self.execute(query)
         id = self.execute("SELECT last_insert_rowid();").result_set[0][0]
         
@@ -92,17 +92,8 @@ class Database:
 
     
     def update(self, table_name: str, id: int, **kwargs):
-        assignment_list = []
-        for key, val in kwargs.items():
-            if type(val) == str:
-                assignment_list.append(f"{key}='{val}'")
-            else:
-                assignment_list.append(f"{key}={val}")
-
-        assignment_state = ', '.join(assignment_list)
         primary_key_column = self.get_columns(table_name)[0]
-
-        query = f"UPDATE {table_name} SET {assignment_state} WHERE {primary_key_column}={id}"
+        query = f"UPDATE {table_name} SET {self.parameter_statement(', ', **kwargs)} WHERE {primary_key_column}={id}"
 
         self.execute(query)
 
@@ -110,15 +101,9 @@ class Database:
     def delete(self, table_name: str, **kwargs):
         query = f"DELETE FROM {table_name}"
 
-        condition_list = []
-        for key, value in kwargs.items():
-            if type(value) == int or type(value) == float:
-                condition_list.append(f" {key}={value}")
-            elif type(value) == str:
-                condition_list.append(f" {key}='{value}'")
-
-        if len(condition_list) > 0:
-            query += " WHERE" + ' AND'.join(condition_list)
+        # 조건 지정
+        if kwargs != None:
+            query += " WHERE" + self.parameter_statement(**kwargs)
 
         self.execute(query)    
 
@@ -127,11 +112,16 @@ class Database:
         return self.select(table_name).to_dict()[primary_key]
 
 
-    def is_exists(self, table_name: str, primary_key: int) -> bool:
-        primary_key_column = self.get_columns(table_name)[0]
-        query = f"SELECT EXISTS(SELECT * FROM {table_name} WHERE {primary_key_column}={primary_key});"
-        result_set = self.execute(query)
+    def is_exists(self, table_name: str, primary_key=None, **kwargs) -> bool:
+        if primary_key != None:
+            primary_key_column = self.get_columns(table_name)[0]
+            condition_state = f"{primary_key_column}={primary_key}"
 
+        else:
+            condition_state = self.parameter_statement(**kwargs)
+        
+        query = f"SELECT EXISTS(SELECT * FROM {table_name} WHERE {condition_state});"
+        result_set = self.execute(query)
         return bool(result_set.result_set[0][0])
 
     
@@ -145,6 +135,7 @@ class Database:
     
     def is_alarm_exists(self, id: int) -> bool:
         return self.is_exists('Alarm', id)
+
 
     def is_channel(self, chat_id: int) -> bool:
         if self.is_chat_exists(chat_id):
@@ -198,6 +189,10 @@ class Database:
             
             return [Alarm(self, alarm_id) for alarm_id in alarm_dict.keys()]
 
+
+    def add_item(self, code: str, name: str, exchange_id: int, unit: str, currency_unit: str) -> int:
+        return self.insert('Item', ItemCode=code, ItemName=name, ExchangeID=exchange_id, ItemUnit=unit, CurrencyUnit=currency_unit)
+        
     
     def add_chat(self, id: int, alarm_option=True, status=0, buffer="") -> int:
         return self.insert('Chat', ChatID=id, AlarmOption=alarm_option, ChatStatus=status, ChatBuffer=buffer)

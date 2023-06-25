@@ -4,6 +4,7 @@ import sqlite3
 conn = sqlite3.connect('database.db')
 cur = conn.cursor()
 
+
 # 거래소 정보 테이블
 cur.execute("""CREATE TABLE Exchange (
     ExchangeID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -23,7 +24,6 @@ cur.execute("""CREATE TABLE Item (
 
     FOREIGN KEY (ExchangeID) REFERENCES Exchange(ExchangeID) ON DELETE CASCADE
 );""")
-cur.execute("""INSERT INTO Item (ItemCode, ItemName, ExchangeID, ItemUnit, CurrencyUnit) VALUES ("KRW-BTC", "비트코인", 1, "BTC", "원");""")
 
 # 채팅 설정 테이블
 cur.execute("""CREATE TABLE Chat (

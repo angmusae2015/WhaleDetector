@@ -157,7 +157,7 @@ def ask_adding_alarm_type(message):
     chat.set_buffer("")
 
     question = AlarmChatTypeQuestion(
-        bot, database, chat.id, 
+        bot, chat.id, 
         "ask_exchange_for_alarm",
         "ask_channel_to_add_alarm"
     )
@@ -226,7 +226,7 @@ def ask_alarm_type(call):
     # 종목 선택 키보드 비활성화
     disable_keyboard(prev_message=call.message, text=f"{item.get_code()}({item.get_name()})")
 
-    question = AlarmTypeQuestion(bot, database, chat_id, "ask_quantity_to_add", "ask_quantity_to_add")
+    question = AlarmTypeQuestion(bot, chat_id, "ask_quantity_to_add", "ask_quantity_to_add")
     question.ask()
 
 
@@ -298,7 +298,7 @@ def ask_editing_alarm_type(message):
     chat.set_buffer("")
 
     question = AlarmChatTypeQuestion(
-        bot, database, chat.id, 
+        bot, chat.id, 
         "ask_alarm_to_edit",
         "ask_channel_to_edit_alarm"
     )
@@ -362,7 +362,7 @@ def ask_alarm_edit_menu(call):
 
     menu_list = [("끄기", "turn_alarm_off") if alarm.is_enabled() else ("켜기", "turn_alarm_on"), ("기준 물량 편집", "edit_quantity"), ("삭제", "delete_alarm")]
 
-    question = Question(bot, database, chat_id, "메뉴를 선택해주세요.", menu_list)
+    question = Question(bot, chat_id, "메뉴를 선택해주세요.", menu_list)
     question.ask()
 
 
@@ -495,7 +495,7 @@ def ask_channel_edit_menu(call):
         ("삭제", "delete_channel")
     ]
 
-    question = Question(bot, database, chat.id, "메뉴를 선택해주세요.", menu_list)
+    question = Question(bot, chat.id, "메뉴를 선택해주세요.", menu_list)
     question.ask()
 
 
@@ -589,13 +589,24 @@ def delete_channel(call):
 @bot.callback_query_handler(func=lambda call: call.data.startswith("update_keyboard"))
 def update_keyboard(call):
     chat_id = call.message.chat.id
-    chat = database.get_chat(chat_id)
 
     trigger, value, unit, next_trigger, display_type = call.data.split(':')
     calculator = QuantityCalculator(next_trigger, value, unit, display_type)
     
     # 메시지의 키보드를 수정하여 업데이트
-    bot.edit_message_reply_markup(chat_id=chat.id, message_id=call.message.message_id, reply_markup=calculator.markup)
+    bot.edit_message_reply_markup(chat_id=chat_id, message_id=call.message.message_id, reply_markup=calculator.markup)
+
+
+# 종목 질문 키보드 페이지 이동
+@bot.callback_query_handler(func=lambda call: call.data.startswith("move_item_page_to"))
+def move_page_to(call):
+    chat_id = call.message.chat.id
+
+    trigger, exchange_id, next_trigger, current_page = call.data.split(':')
+    question = ItemQuestion(bot, database, chat_id, int(exchange_id), next_trigger, int(current_page))
+    
+    # 메시지의 키보드를 수정하여 업데이트
+    bot.edit_message_reply_markup(chat_id=chat_id, message_id=call.message.message_id, reply_markup=question.markup)
 
 
 # 대화 중단
