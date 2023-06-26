@@ -537,7 +537,7 @@ def turn_channel_alarm_on(call):
     # 메뉴 선택 키보드 비활성화
     disable_keyboard(prev_message=call.message, text="알림 켜기")
 
-    channel.set_alarm_option(False)
+    channel.set_alarm_option(True)
     bot.send_message(chat.id, "해당 채널의 알림을 다시 시작했어요.")
 
     chat.set_buffer("")
